@@ -20,11 +20,11 @@ int main(int, char * argv[])
   typedef itk::Function::MorphologyHistogram< PType, std::less<PType> > HistType;
 
   typedef itk::AnchorOpenCloseImageFilter< IType, IType, HistType,
-    std::less_equal<PType>, 
-    std::greater_equal<PType> > FilterType;
+    std::greater_equal<PType>, 
+    std::less_equal<PType> > FilterType;
   FilterType::Pointer filter = FilterType::New();
   filter->SetInput( reader->GetOutput() );
-
+  filter->SetSize(11);
   itk::SimpleFilterWatcher watcher(filter, "filter");
 
   typedef itk::ImageFileWriter< IType > WriterType;

@@ -73,6 +73,7 @@ public:
 
   inline bool useVectorBasedAlgorithm()
     {
+        return(false);
     // bool, short and char are acceptable for vector based algorithm: they do not require
     // too much memory. Other types are not usable with that algorithm
     return typeid(TInputPixel) == typeid(unsigned char)
@@ -108,7 +109,7 @@ public:
     typename MapType::iterator mapIt = m_Map.begin();
     while( mapIt != m_Map.end() )
       {
-      if( mapIt->second == 0 )
+      if( mapIt->second <= 0 )
         { 
         // this value must be removed from the histogram
         // The value must be stored and the iterator updated before removing the value

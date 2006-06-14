@@ -2,6 +2,9 @@
 #define __itkAnchorOpenCloseImageFilter_h
 
 #include "itkImageToImageFilter.h"
+#include "itkProgressReporter.h"
+
+//#define RAWHIST
 
 namespace itk {
 
@@ -10,7 +13,8 @@ namespace itk {
 /** 
  * \class AnchorOpenCloseImageFilter
  * \brief class to implement openings and closings using anchor
- * methods
+ * methods. This is the base class that must be instantiated with
+ * appropriate definitions of greater, less and so on
 
 **/
 template<class TInputImage, class TOutputImage, class THistogram,
@@ -51,6 +55,15 @@ public:
   itkTypeMacro(AnchorOpenCloseImageFilter,
                ImageToImageFilter);
 
+  itkSetMacro(Size, unsigned int);
+  itkGetConstReferenceMacro(Size, unsigned int);
+  itkBooleanMacro(Size);
+
+  itkSetMacro(Direction, unsigned int);
+  itkGetConstReferenceMacro(Direction, unsigned int);
+  itkBooleanMacro(Direction);
+
+
 protected:
   AnchorOpenCloseImageFilter();
   ~AnchorOpenCloseImageFilter() {};
@@ -71,7 +84,11 @@ private:
 
   bool startLine(OutputImagePixelType * buffer,
 		 OutputImagePixelType &Extreme,
+#ifdef RAWHIST
+		 unsigned int *  histo,
+#else
 		 THistogram &histo,
+#endif
 		 unsigned &outLeftP,
 		 unsigned &outRightP);
 

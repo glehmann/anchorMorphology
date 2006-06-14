@@ -39,6 +39,8 @@ AnchorOpenCloseImageFilter<TInputImage, TOutputImage, THistogram, TFunction1, TF
   // get the region size
   OutputImageRegionType OReg = output->GetRequestedRegion();
   unsigned int bufflength = OReg.GetSize()[m_Direction];
+  unsigned linecount = OReg.GetNumberOfPixels()/bufflength;
+  ProgressReporter progress(this, 0, linecount);
 
   OutputImagePixelType * buffer = new OutputImagePixelType[bufflength];
 
@@ -51,8 +53,13 @@ AnchorOpenCloseImageFilter<TInputImage, TOutputImage, THistogram, TFunction1, TF
   OutputLineIteratorType outLineIt(output, output->GetRequestedRegion());
   outLineIt.SetDirection(m_Direction);
 
+#ifdef RAWHIST
+  unsigned int * histo = new unsigned int[256];
+#else
   // create a histogram
   THistogram histo;
+#endif
+
   for (inLineIt.GoToBegin(), outLineIt.GoToBegin(); ! inLineIt.IsAtEnd(); inLineIt.NextLine(),outLineIt.NextLine())
     {
     // copy the line to the buffer
@@ -62,7 +69,8 @@ AnchorOpenCloseImageFilter<TInputImage, TOutputImage, THistogram, TFunction1, TF
       {
       OutputImagePixelType PVal = static_cast<OutputImagePixelType>(inLineIt.Get());
       buffer[pos]=PVal;
-      ++pos;
+      ++pos; 
+      ++inLineIt;
       }
     // done copying
     // start the real work - everything here will be done with index
@@ -81,7 +89,7 @@ AnchorOpenCloseImageFilter<TInputImage, TOutputImage, THistogram, TFunction1, TF
     while (startLine(buffer, Extreme, histo, outLeftP, outRightP)){}
 
     finishLine(buffer, Extreme, outLeftP, outRightP);
-      
+    std::cout << "------------------------------" << std::endl;
 
     // copy the buffer to output
     inLineIt.GoToBeginOfLine();
@@ -90,14 +98,15 @@ AnchorOpenCloseImageFilter<TInputImage, TOutputImage, THistogram, TFunction1, TF
       {
       outLineIt.Set(buffer[pos]);
       ++pos;
+      ++outLineIt;
       }
     // done with this line
+    progress.CompletedPixel();
 
     }
 
-
   delete [] buffer;
-
+//  delete [] histo;
 }
 
 template<class TInputImage, class TOutputImage, class THistogram, class TFunction1, class TFunction2>
@@ -105,7 +114,11 @@ bool
 AnchorOpenCloseImageFilter<TInputImage, TOutputImage, THistogram, TFunction1, TFunction2>
 ::startLine(OutputImagePixelType * buffer,
 	    OutputImagePixelType &Extreme,
-	    THistogram &histo,	    
+#ifdef RAWHIST
+	    unsigned int * histo,	    
+#else
+	    THistogram &histo,
+#endif
 	    unsigned &outLeftP,
 	    unsigned &outRightP)
 {
@@ -132,7 +145,7 @@ AnchorOpenCloseImageFilter<TInputImage, TOutputImage, THistogram, TFunction1, TF
   // ran m_Size pixels ahead
   while (currentP < sentinel)
     {
-    if (m_TF1(buffer[currentP], Extreme))
+    if (m_TF2(buffer[currentP], Extreme))
       {
 #if 0
       endP = currentP;
@@ -183,21 +196,43 @@ AnchorOpenCloseImageFilter<TInputImage, TOutputImage, THistogram, TFunction1, TF
     {
     // Now we need a histogram
     // Initialise it
+#ifdef RAWHIST
+    std::fill(histo, &(histo[256]), 0);
+#else
     histo.Init();
+#endif
     ++outLeftP;
     for (unsigned aux = outLeftP; aux <= currentP; ++aux)
       {
+      std::cout << "Adding " << (int)buffer[aux] << std::endl;
+#ifdef RAWHIST
+      histo[buffer[aux]]++;
+#else
       histo.AddPixel(buffer[aux]);
+#endif
       }
     // find the minimum value. The version
     // in the paper assumes integer pixel types and initializes the
     // search to the current extreme. Hopefully the latter is an
     // optimization step.
+#ifdef RAWHIST
+    ++Extreme;
+    while (histo[Extreme] <= 0) {++Extreme;}
+    std::cout << "A) Extreme from hist = " << (int) Extreme << std::endl;
+    histo[buffer[outLeftP]]--;
+    std::cout << "Removing " << (int)buffer[outLeftP] << std::endl;
+    buffer[outLeftP] = Extreme;
+    histo[Extreme]++;
+    std::cout << "Adding " << (int)Extreme << std::endl;
+#else
     Extreme = histo.GetValue();
-    //
+    std::cout << "A) Extreme from hist = " << (int) Extreme << std::endl;
     histo.RemovePixel(buffer[outLeftP]);
+    std::cout << "Removing " << (int)buffer[outLeftP] << std::endl;
     buffer[outLeftP] = Extreme;
     histo.AddPixel(Extreme);
+    std::cout << "Adding " << (int)Extreme << std::endl;
+#endif
     }
 
   while (currentP < outRightP)
@@ -226,6 +261,19 @@ AnchorOpenCloseImageFilter<TInputImage, TOutputImage, THistogram, TFunction1, TF
     else
       {
       /* histogram update */
+#ifdef RAWHIST
+      histo[buffer[currentP]]++;
+      std::cout << "Adding " << (int)buffer[currentP] << std::endl;
+      histo[buffer[outLeftP]]--;
+      std::cout << "Removing " << (int)buffer[outLeftP] << std::endl;
+      while (histo[Extreme] <= 0) {Extreme++;}
+      ++outLeftP;
+      histo[buffer[outLeftP]]--;
+      std::cout << "Removing " << (int)buffer[outLeftP] << std::endl;
+      buffer[outLeftP] = Extreme;
+      histo[Extreme]++;
+      std::cout << "B) Extreme from hist = " << (int) Extreme << std::endl;
+#else
       histo.AddPixel(buffer[currentP]);
       histo.RemovePixel(buffer[outLeftP]);
       Extreme = histo.GetValue();
@@ -233,17 +281,33 @@ AnchorOpenCloseImageFilter<TInputImage, TOutputImage, THistogram, TFunction1, TF
       histo.RemovePixel(buffer[outLeftP]);
       buffer[outLeftP] = Extreme;
       histo.AddPixel(Extreme);
+      std::cout << "B) Extreme from hist = " << (int) Extreme << std::endl;
+#endif
       }
     }
   // Finish the line
   while (outLeftP < outRightP)
     {
+#ifdef RAWHIST
+    histo[buffer[outLeftP]]--;
+    while (histo[Extreme] <= 0) { Extreme++;}
+ 
+    ++outLeftP;
+    histo[buffer[outLeftP]]--;
+    
+    buffer[outLeftP] = Extreme;
+    histo[Extreme]++;
+    std::cout << "C) Extreme from hist = " << (int) Extreme << std::endl;
+
+#else
     histo.RemovePixel(buffer[outLeftP]);
     Extreme = histo.GetValue();
     ++outLeftP;
     histo.RemovePixel(buffer[outLeftP]);
     buffer[outLeftP] = Extreme;
     histo.AddPixel(Extreme);
+    std::cout << "C) Extreme from hist = " << (int) Extreme << std::endl;
+#endif
     }
   return(false);
 }
