@@ -3,8 +3,8 @@
 #include "itkCommand.h"
 #include "itkSimpleFilterWatcher.h"
 
-#include "itkImageFilter.h"
-
+#include "itkAnchorOpenCloseImageFilter.h"
+#include "itkAnchorHistogram.h"
 
 int main(int, char * argv[])
 {
@@ -17,7 +17,11 @@ int main(int, char * argv[])
   ReaderType::Pointer reader = ReaderType::New();
   reader->SetFileName( argv[1] );
 
-  typedef itk::ImageFilter< IType, IType > FilterType;
+  typedef itk::Function::MorphologyHistogram< PType, std::less<PType> > HistType;
+
+  typedef itk::AnchorOpenCloseImageFilter< IType, IType, HistType,
+    std::less_equal<PType>, 
+    std::greater_equal<PType> > FilterType;
   FilterType::Pointer filter = FilterType::New();
   filter->SetInput( reader->GetOutput() );
 
