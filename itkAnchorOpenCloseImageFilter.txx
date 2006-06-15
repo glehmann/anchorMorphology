@@ -7,17 +7,17 @@
 
 namespace itk {
 
-template <class TInputImage, class TOutputImage, class THistogram, class TFunction1, class TFunction2>
-AnchorOpenCloseImageFilter<TInputImage, TOutputImage, THistogram, TFunction1, TFunction2>
+template <class TInputImage, class TOutputImage, class THistogramCompare, class TFunction1, class TFunction2>
+AnchorOpenCloseImageFilter<TInputImage, TOutputImage, THistogramCompare, TFunction1, TFunction2>
 ::AnchorOpenCloseImageFilter()
 {
   m_Direction = 0;
   m_Size=2;
 }
 
-template <class TInputImage, class TOutputImage, class THistogram, class TFunction1, class TFunction2>
+template <class TInputImage, class TOutputImage, class THistogramCompare, class TFunction1, class TFunction2>
 void
-AnchorOpenCloseImageFilter<TInputImage, TOutputImage, THistogram, TFunction1, TFunction2>
+AnchorOpenCloseImageFilter<TInputImage, TOutputImage, THistogramCompare, TFunction1, TFunction2>
 ::GenerateData()
 {
   // TFunction1 will be >= for openings
@@ -57,7 +57,15 @@ AnchorOpenCloseImageFilter<TInputImage, TOutputImage, THistogram, TFunction1, TF
   unsigned int * histo = new unsigned int[256];
 #else
   // create a histogram
-  THistogram histo;
+  Histogram *histo;
+  if (useVectorBasedHistogram())
+    {
+    histo = new VHistogram;
+    } 
+  else
+    {
+    histo = new MHistogram;
+    }
 #endif
 
   for (inLineIt.GoToBegin(), outLineIt.GoToBegin(); ! inLineIt.IsAtEnd(); inLineIt.NextLine(),outLineIt.NextLine())
@@ -86,10 +94,10 @@ AnchorOpenCloseImageFilter<TInputImage, TOutputImage, THistogram, TFunction1, TF
       --outRightP;
       }
     OutputImagePixelType Extreme;
-    while (startLine(buffer, Extreme, histo, outLeftP, outRightP)){}
+    while (startLine(buffer, Extreme, *histo, outLeftP, outRightP)){}
 
     finishLine(buffer, Extreme, outLeftP, outRightP);
-    std::cout << "------------------------------" << std::endl;
+//    std::cout << "------------------------------" << std::endl;
 
     // copy the buffer to output
     inLineIt.GoToBeginOfLine();
@@ -109,15 +117,15 @@ AnchorOpenCloseImageFilter<TInputImage, TOutputImage, THistogram, TFunction1, TF
 //  delete [] histo;
 }
 
-template<class TInputImage, class TOutputImage, class THistogram, class TFunction1, class TFunction2>
+template<class TInputImage, class TOutputImage, class THistogramCompare, class TFunction1, class TFunction2>
 bool
-AnchorOpenCloseImageFilter<TInputImage, TOutputImage, THistogram, TFunction1, TFunction2>
+AnchorOpenCloseImageFilter<TInputImage, TOutputImage, THistogramCompare, TFunction1, TFunction2>
 ::startLine(OutputImagePixelType * buffer,
 	    OutputImagePixelType &Extreme,
 #ifdef RAWHIST
 	    unsigned int * histo,	    
 #else
-	    THistogram &histo,
+	    Histogram &histo,
 #endif
 	    unsigned &outLeftP,
 	    unsigned &outRightP)
@@ -199,12 +207,12 @@ AnchorOpenCloseImageFilter<TInputImage, TOutputImage, THistogram, TFunction1, TF
 #ifdef RAWHIST
     std::fill(histo, &(histo[256]), 0);
 #else
-    histo.Init();
+    histo.Reset();
 #endif
     ++outLeftP;
     for (unsigned aux = outLeftP; aux <= currentP; ++aux)
       {
-      std::cout << "Adding " << (int)buffer[aux] << std::endl;
+//      std::cout << "Adding " << (int)buffer[aux] << std::endl;
 #ifdef RAWHIST
       histo[buffer[aux]]++;
 #else
@@ -226,12 +234,12 @@ AnchorOpenCloseImageFilter<TInputImage, TOutputImage, THistogram, TFunction1, TF
     std::cout << "Adding " << (int)Extreme << std::endl;
 #else
     Extreme = histo.GetValue();
-    std::cout << "A) Extreme from hist = " << (int) Extreme << std::endl;
+//    std::cout << "A) Extreme from hist = " << (int) Extreme << std::endl;
     histo.RemovePixel(buffer[outLeftP]);
-    std::cout << "Removing " << (int)buffer[outLeftP] << std::endl;
+//    std::cout << "Removing " << (int)buffer[outLeftP] << std::endl;
     buffer[outLeftP] = Extreme;
     histo.AddPixel(Extreme);
-    std::cout << "Adding " << (int)Extreme << std::endl;
+//    std::cout << "Adding " << (int)Extreme << std::endl;
 #endif
     }
 
@@ -275,13 +283,16 @@ AnchorOpenCloseImageFilter<TInputImage, TOutputImage, THistogram, TFunction1, TF
       std::cout << "B) Extreme from hist = " << (int) Extreme << std::endl;
 #else
       histo.AddPixel(buffer[currentP]);
+//      std::cout << "Adding " << (int)buffer[currentP] << std::endl;
       histo.RemovePixel(buffer[outLeftP]);
+//      std::cout << "Removing " << (int)buffer[outLeftP] << std::endl;
       Extreme = histo.GetValue();
       ++outLeftP;
       histo.RemovePixel(buffer[outLeftP]);
+//      std::cout << "Removing " << (int)buffer[outLeftP] << std::endl;
       buffer[outLeftP] = Extreme;
       histo.AddPixel(Extreme);
-      std::cout << "B) Extreme from hist = " << (int) Extreme << std::endl;
+//      std::cout << "B) Extreme from hist = " << (int) Extreme << std::endl;
 #endif
       }
     }
@@ -306,15 +317,15 @@ AnchorOpenCloseImageFilter<TInputImage, TOutputImage, THistogram, TFunction1, TF
     histo.RemovePixel(buffer[outLeftP]);
     buffer[outLeftP] = Extreme;
     histo.AddPixel(Extreme);
-    std::cout << "C) Extreme from hist = " << (int) Extreme << std::endl;
+//    std::cout << "C) Extreme from hist = " << (int) Extreme << std::endl;
 #endif
     }
   return(false);
 }
 
-template<class TInputImage, class TOutputImage, class THistogram, class TFunction1, class TFunction2>
+template<class TInputImage, class TOutputImage, class THistogramCompare, class TFunction1, class TFunction2>
 bool
-AnchorOpenCloseImageFilter<TInputImage, TOutputImage, THistogram, TFunction1, TFunction2>
+AnchorOpenCloseImageFilter<TInputImage, TOutputImage, THistogramCompare, TFunction1, TFunction2>
 ::finishLine(OutputImagePixelType * buffer,
 	     OutputImagePixelType &Extreme,
 	     unsigned &outLeftP,
@@ -343,13 +354,14 @@ AnchorOpenCloseImageFilter<TInputImage, TOutputImage, THistogram, TFunction1, TF
     }
 }
 
-template<class TInputImage, class TOutputImage, class THistogram, class TFunction1, class TFunction2>
+template<class TInputImage, class TOutputImage, class THistogramCompare, class TFunction1, class TFunction2>
 void
-AnchorOpenCloseImageFilter<TInputImage, TOutputImage, THistogram, TFunction1, TFunction2>
+AnchorOpenCloseImageFilter<TInputImage, TOutputImage, THistogramCompare, TFunction1, TFunction2>
 ::PrintSelf(std::ostream &os, Indent indent) const
 {
   Superclass::PrintSelf(os, indent);
-
+  os << indent << "Direction: " << m_Direction << std::endl;
+  os << indent << "Size: " << m_Size << std::endl;
 }
 
 

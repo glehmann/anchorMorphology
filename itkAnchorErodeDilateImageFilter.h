@@ -1,5 +1,5 @@
-#ifndef __itkAnchorOpenCloseImageFilter_h
-#define __itkAnchorOpenCloseImageFilter_h
+#ifndef __itkAnchorErodeDilateImageFilter_h
+#define __itkAnchorErodeDilateImageFilter_h
 
 #include "itkImageToImageFilter.h"
 #include "itkProgressReporter.h"
@@ -12,20 +12,20 @@ namespace itk {
 
 
 /** 
- * \class AnchorOpenCloseImageFilter
- * \brief class to implement openings and closings using anchor
+ * \class AnchorErodeDilateImageFilter
+ * \brief class to implement erosions and dilations using anchor
  * methods. This is the base class that must be instantiated with
  * appropriate definitions of greater, less and so on
 
 **/
 template<class TInputImage, class TOutputImage, class THistogramCompare,
 	 class TFunction1, class TFunction2>
-class ITK_EXPORT AnchorOpenCloseImageFilter :
+class ITK_EXPORT AnchorErodeDilateImageFilter :
     public ImageToImageFilter<TInputImage, TOutputImage>
 {
 public:
   /** Standard class typedefs. */
-  typedef AnchorOpenCloseImageFilter Self;
+  typedef AnchorErodeDilateImageFilter Self;
   typedef ImageToImageFilter<TInputImage, TOutputImage>
   Superclass;
   typedef SmartPointer<Self>        Pointer;
@@ -53,7 +53,7 @@ public:
   itkNewMacro(Self);
 
   /** Runtime information support. */
-  itkTypeMacro(AnchorOpenCloseImageFilter,
+  itkTypeMacro(AnchorErodeDilateImageFilter,
                ImageToImageFilter);
 
   itkSetMacro(Size, unsigned int);
@@ -66,8 +66,8 @@ public:
 
 
 protected:
-  AnchorOpenCloseImageFilter();
-  ~AnchorOpenCloseImageFilter() {};
+  AnchorErodeDilateImageFilter();
+  ~AnchorErodeDilateImageFilter() {};
   void PrintSelf(std::ostream& os, Indent indent) const;
 
   /** Single-threaded version of GenerateData.  This filter delegates
@@ -76,7 +76,7 @@ protected:
 
 
 private:
-  AnchorOpenCloseImageFilter(const Self&); //purposely not implemented
+  AnchorErodeDilateImageFilter(const Self&); //purposely not implemented
   void operator=(const Self&); //purposely not implemented
   unsigned int m_Size;
   unsigned int m_Direction;
@@ -88,6 +88,7 @@ private:
   typedef MorphologyHistogramMap<InputImagePixelType,THistogramCompare> MHistogram;
 
   bool startLine(OutputImagePixelType * buffer,
+		 OutputImagePixelType * inbuffer,
 		 OutputImagePixelType &Extreme,
 #ifdef RAWHIST
 		 unsigned int *  histo,
@@ -95,15 +96,24 @@ private:
 		 Histogram &histo,
 #endif
 		 unsigned &outLeftP,
-		 unsigned &outRightP);
+		 unsigned &outRightP,
+		 unsigned &inLeftP,
+		 unsigned &inRightP,
+		 unsigned middle);
 
   bool finishLine(OutputImagePixelType * buffer,
+		  OutputImagePixelType * inbuffer,
 		  OutputImagePixelType &Extreme,
+		  Histogram &histo,
 		  unsigned &outLeftP,
-		  unsigned &outRightP);
+		  unsigned &outRightP,
+		  unsigned &inLeftP,
+		  unsigned &inRightP,
+		  unsigned middle);
 
   bool useVectorBasedHistogram()
   {
+    return(false);
     // bool, short and char are acceptable for vector based algorithm: they do not require
     // too much memory. Other types are not usable with that algorithm
     return typeid(InputImagePixelType) == typeid(unsigned char)
@@ -113,6 +123,14 @@ private:
         || typeid(InputImagePixelType) == typeid(bool);
     }
 
+
+  void check(unsigned val, unsigned start, unsigned end, std::string text=std::string(""))
+  {
+    if ((val < start) || (val >= end))
+      {
+      std::cout << "******************" << text << " " << val << std::endl;
+      }
+  }
 } ; // end of class
 
 
@@ -120,7 +138,7 @@ private:
 
 
 #ifndef ITK_MANUAL_INSTANTIATION
-#include "itkAnchorOpenCloseImageFilter.txx"
+#include "itkAnchorErodeDilateImageFilter.txx"
 #endif
 
 #endif
