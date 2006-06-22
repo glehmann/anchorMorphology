@@ -7,17 +7,18 @@
 
 namespace itk {
 
-template <class TInputImage, class TOutputImage, class THistogram, class TFunction1, class TFunction2>
-AnchorErodeDilateImageFilter<TInputImage, TOutputImage, THistogram, TFunction1, TFunction2>
+template <class TInputImage, class TOutputImage, class THistogramCompare, class TFunction1, class TFunction2>
+AnchorErodeDilateImageFilter<TInputImage, TOutputImage, THistogramCompare, TFunction1, TFunction2>
 ::AnchorErodeDilateImageFilter()
 {
   m_Direction = 0;
   m_Size=2;
+  AnchorLine.SetSize(m_Size);
 }
 
-template <class TInputImage, class TOutputImage, class THistogram, class TFunction1, class TFunction2>
+template <class TInputImage, class TOutputImage, class THistogramCompare, class TFunction1, class TFunction2>
 void
-AnchorErodeDilateImageFilter<TInputImage, TOutputImage, THistogram, TFunction1, TFunction2>
+AnchorErodeDilateImageFilter<TInputImage, TOutputImage, THistogramCompare, TFunction1, TFunction2>
 ::GenerateData()
 {
   // TFunction1 will be < for erosions
@@ -34,6 +35,8 @@ AnchorErodeDilateImageFilter<TInputImage, TOutputImage, THistogram, TFunction1, 
   this->AllocateOutputs();
   typename TOutputImage::Pointer output = this->GetOutput();
   typename TInputImage::ConstPointer input = this->GetInput();
+
+  AnchorLine.SetSize(m_Size);
   
   // get the region size
   OutputImageRegionType OReg = output->GetRequestedRegion();
@@ -41,8 +44,8 @@ AnchorErodeDilateImageFilter<TInputImage, TOutputImage, THistogram, TFunction1, 
   unsigned linecount = OReg.GetNumberOfPixels()/bufflength;
   ProgressReporter progress(this, 0, linecount);
 
-  OutputImagePixelType * buffer = new OutputImagePixelType[bufflength];
-  OutputImagePixelType * inbuffer = new OutputImagePixelType[bufflength];
+  InputImagePixelType * buffer = new InputImagePixelType[bufflength];
+  InputImagePixelType * inbuffer = new InputImagePixelType[bufflength];
 
   // set up a line iterator
   typedef itk::ImageLinearConstIteratorWithIndex<InputImageType> InputLineIteratorType;
@@ -53,22 +56,6 @@ AnchorErodeDilateImageFilter<TInputImage, TOutputImage, THistogram, TFunction1, 
   OutputLineIteratorType outLineIt(output, output->GetRequestedRegion());
   outLineIt.SetDirection(m_Direction);
 
-  unsigned int middle = m_Size/2;
-
-#ifdef RAWHIST
-  unsigned int * histo = new unsigned int[256];
-#else
-  // create a histogram
-  Histogram *histo;
-  if (useVectorBasedHistogram())
-    {
-    histo = new VHistogram;
-    } 
-  else
-    {
-    histo = new MHistogram;
-    }
-#endif
 
   for (inLineIt.GoToBegin(), outLineIt.GoToBegin(); ! inLineIt.IsAtEnd(); inLineIt.NextLine(),outLineIt.NextLine())
     {
@@ -77,7 +64,7 @@ AnchorErodeDilateImageFilter<TInputImage, TOutputImage, THistogram, TFunction1, 
     unsigned pos = 0;
     while (! inLineIt.IsAtEndOfLine())
       {
-      OutputImagePixelType PVal = static_cast<OutputImagePixelType>(inLineIt.Get());
+      InputImagePixelType PVal = (inLineIt.Get());
 //      buffer[pos]=PVal;
       inbuffer[pos]=PVal;
       ++pos; 
@@ -85,60 +72,14 @@ AnchorErodeDilateImageFilter<TInputImage, TOutputImage, THistogram, TFunction1, 
       }
     // done copying
     // start the real work - everything here will be done with index
-    // arithmetic rather than pointer arithmetic
-    unsigned outLeftP = 0, outRightP = bufflength - 1;
-    unsigned inLeftP = 0, inRightP = bufflength - 1;
-    OutputImagePixelType Extreme;
-    histo->Reset();
-
-    // Left border, first half of structuring element
-    Extreme = inbuffer[inLeftP];
-    histo->AddPixel(Extreme);
-    for (unsigned i = 0; i < middle; i++)
-      {
-      ++inLeftP;
-      histo->AddPixel(inbuffer[inLeftP]);
-      if (m_TF1(inbuffer[inLeftP], Extreme))
-	{
-	Extreme = inbuffer[inLeftP];
-	}
-      }
-    buffer[outLeftP] = Extreme;
-    
-    // Second half of SE
-    for (unsigned i = 0; i < m_Size - middle - 1; i++)
-      {
-      ++inLeftP;
-      ++outLeftP;
-      histo->AddPixel(inbuffer[inLeftP]);
-      if (m_TF1(inbuffer[inLeftP], Extreme))
-	{
-	Extreme = inbuffer[inLeftP];
-	}
-      buffer[outLeftP] = Extreme;
-      }
-    // Use the histogram until we find a new minimum 
-    while ((inLeftP < inRightP) && m_TF2(Extreme, inbuffer[inLeftP + 1]))
-      {
-      ++inLeftP;
-      ++outLeftP;
-      histo->RemovePixel(inbuffer[inLeftP - m_Size]);
-      histo->AddPixel(inbuffer[inLeftP]);
-      Extreme = histo->GetValue();
-      buffer[outLeftP] = Extreme;
-      }
-    Extreme = buffer[outLeftP];
-
-    while (startLine(buffer, inbuffer, Extreme, *histo, outLeftP, outRightP, inLeftP, inRightP, middle)){}
-
-    finishLine(buffer, inbuffer, Extreme, *histo, outLeftP, outRightP, inLeftP, inRightP, middle);
+    AnchorLine.doLine(buffer, inbuffer, bufflength);
 
     // copy the buffer to output
     inLineIt.GoToBeginOfLine();
     pos = 0;
     while (! outLineIt.IsAtEndOfLine())
       {
-      outLineIt.Set(buffer[pos]);
+      outLineIt.Set(static_cast<OutputImagePixelType>(buffer[pos]));
       ++pos;
       ++outLineIt;
       }
@@ -148,180 +89,11 @@ AnchorErodeDilateImageFilter<TInputImage, TOutputImage, THistogram, TFunction1, 
 
   delete [] buffer;
   delete [] inbuffer;
-
 }
 
-template<class TInputImage, class TOutputImage, class THistogram, class TFunction1, class TFunction2>
-bool
-AnchorErodeDilateImageFilter<TInputImage, TOutputImage, THistogram, TFunction1, TFunction2>
-::startLine(OutputImagePixelType * buffer,
-	    OutputImagePixelType * inbuffer,
-	    OutputImagePixelType &Extreme,
-#ifdef RAWHIST
-	    unsigned int * histo,	    
-#else
-	    Histogram &histo,
-#endif
-	    unsigned &outLeftP,
-	    unsigned &outRightP,
-	    unsigned &inLeftP,
-	    unsigned &inRightP,
-	    unsigned middle)
-{
-  // This returns true to indicate return to startLine label in pseudo
-  // code, and false to indicate finshLine
-  unsigned currentP = inLeftP + 1;
-  unsigned sentinel;
-  
-  while ((currentP < inRightP) && m_TF2(inbuffer[currentP], Extreme))
-    {
-    Extreme = inbuffer[currentP];
-    ++outLeftP;
-    buffer[outLeftP] = Extreme;
-    ++currentP;
-    }
-  inLeftP = currentP - 1;
-
-  sentinel = inLeftP + m_Size;
-  if (sentinel > inRightP)
-    {
-    // finish
-    return (false);
-    }
-  ++outLeftP;
-  buffer[outLeftP] = Extreme;
-
-  // ran m_Size pixels ahead
-  ++currentP;
-  while (currentP < sentinel)
-    {
-    if (m_TF2(inbuffer[currentP], Extreme))
-      {
-      Extreme = inbuffer[currentP];
-      ++outLeftP;
-      buffer[outLeftP] = Extreme;
-      inLeftP = currentP;
-      return (true);
-      }
-    ++currentP;
-    ++outLeftP;
-    buffer[outLeftP] = Extreme;
-    }
-  // We didn't find a smaller (for erosion) value in the segment of
-  // reach of inLeftP. currentP is the first position outside the
-  // reach of inLeftP
-  if (m_TF2(inbuffer[currentP], Extreme))
-    {
-    Extreme = inbuffer[currentP];
-    ++outLeftP;
-    buffer[outLeftP] = Extreme;
-    inLeftP = currentP;
-    return (true);
-    }
-  else
-    {
-    // Now we need a histogram
-    // Initialise it
-    histo.Reset();
-    ++outLeftP;
-    ++inLeftP;
-    for (unsigned aux = inLeftP; aux <= currentP; ++aux)
-      {
-      histo.AddPixel(inbuffer[aux]);
-      }
-    Extreme = histo.GetValue();
-    buffer[outLeftP] = Extreme;
-    }
-
-  while (currentP < inRightP)
-    {
-    ++currentP;
-    if (m_TF2(inbuffer[currentP], Extreme))
-      {
-      // Found a new extrem
-      Extreme = inbuffer[currentP];
-      ++outLeftP;
-      buffer[outLeftP] = Extreme;
-      inLeftP = currentP;
-      return(true);
-      }
-    else
-      {
-      // update histogram
-      histo.AddPixel(inbuffer[currentP]);
-      histo.RemovePixel(inbuffer[inLeftP]);
-      // find extreme
-      Extreme = histo.GetValue();
-      ++inLeftP;
-      ++outLeftP;
-      buffer[outLeftP] = Extreme;
-      }
-    }
-  return(false);
-}
-
-template<class TInputImage, class TOutputImage, class THistogram, class TFunction1, class TFunction2>
-bool
-AnchorErodeDilateImageFilter<TInputImage, TOutputImage, THistogram, TFunction1, TFunction2>
-::finishLine(OutputImagePixelType * buffer,
-	     OutputImagePixelType * inbuffer,
-	     OutputImagePixelType &Extreme,
-	     Histogram &histo,
-	     unsigned &outLeftP,
-	     unsigned &outRightP,
-	     unsigned &inLeftP,
-	     unsigned &inRightP,
-	     unsigned middle)
-{
-  // Handles the right border.
-  // First half of the structuring element
-  histo.Reset();
-  Extreme = inbuffer[inRightP];
-  histo.AddPixel(Extreme);
-
-  for (unsigned i = 0; i < middle; i++)
-    {
-    --inRightP; 
-    histo.AddPixel(inbuffer[inRightP]);
-    if (m_TF1(inbuffer[inRightP], Extreme))
-      {
-      Extreme = inbuffer[inRightP];
-      }
-    }
-  buffer[outRightP] = Extreme;
-  // second half of SE
-  for (unsigned i = 0; (i<m_Size - middle - 1) && (outLeftP < outRightP); i++)
-    {
-    --inRightP;
-    --outRightP;
-    histo.AddPixel(inbuffer[inRightP]);
-    if (m_TF1(inbuffer[inRightP], Extreme))
-      {
-      Extreme = inbuffer[inRightP];
-      }
-    buffer[outRightP] = Extreme;
-    }
-
-  while (outLeftP < outRightP)
-    {
-    --inRightP;
-    --outRightP;
-    histo.RemovePixel(inbuffer[inRightP + m_Size]);
-    histo.AddPixel(inbuffer[inRightP]);
-    if (m_TF1(inbuffer[inRightP], Extreme))
-      {
-      Extreme = inbuffer[inRightP];
-      }
-    Extreme = histo.GetValue();
-    buffer[outRightP] = Extreme;
-    }
-  
-  
-}
-
-template<class TInputImage, class TOutputImage, class THistogram, class TFunction1, class TFunction2>
+template<class TInputImage, class TOutputImage, class THistogramCompare, class TFunction1, class TFunction2>
 void
-AnchorErodeDilateImageFilter<TInputImage, TOutputImage, THistogram, TFunction1, TFunction2>
+AnchorErodeDilateImageFilter<TInputImage, TOutputImage, THistogramCompare, TFunction1, TFunction2>
 ::PrintSelf(std::ostream &os, Indent indent) const
 {
   Superclass::PrintSelf(os, indent);

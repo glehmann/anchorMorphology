@@ -3,9 +3,7 @@
 
 #include "itkImageToImageFilter.h"
 #include "itkProgressReporter.h"
-#include "itkAnchorHistogram.h"
-
-//#define RAWHIST
+#include "itkAnchorOpenCloseLine.h"
 
 namespace itk {
 
@@ -80,38 +78,11 @@ private:
   void operator=(const Self&); //purposely not implemented
   unsigned int m_Size;
   unsigned int m_Direction;
-  TFunction1 m_TF1;
-  TFunction2 m_TF2;
 
-  typedef MorphologyHistogram<InputImagePixelType> Histogram;
-  typedef MorphologyHistogramVec<InputImagePixelType,THistogramCompare> VHistogram;
-  typedef MorphologyHistogramMap<InputImagePixelType,THistogramCompare> MHistogram;
+  // the class that operates on lines
+  typedef AnchorOpenCloseLine<InputImagePixelType, THistogramCompare, TFunction1, TFunction2> AnchorLineType;
 
-  bool startLine(OutputImagePixelType * buffer,
-		 OutputImagePixelType &Extreme,
-#ifdef RAWHIST
-		 unsigned int *  histo,
-#else
-		 Histogram &histo,
-#endif
-		 unsigned &outLeftP,
-		 unsigned &outRightP);
-
-  bool finishLine(OutputImagePixelType * buffer,
-		  OutputImagePixelType &Extreme,
-		  unsigned &outLeftP,
-		  unsigned &outRightP);
-
-  bool useVectorBasedHistogram()
-  {
-    // bool, short and char are acceptable for vector based algorithm: they do not require
-    // too much memory. Other types are not usable with that algorithm
-    return typeid(InputImagePixelType) == typeid(unsigned char)
-        || typeid(InputImagePixelType) == typeid(signed char)
-        || typeid(InputImagePixelType) == typeid(unsigned short)
-        || typeid(InputImagePixelType) == typeid(signed short)
-        || typeid(InputImagePixelType) == typeid(bool);
-    }
+  AnchorLineType AnchorLine;
 
 } ; // end of class
 

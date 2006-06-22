@@ -3,13 +3,9 @@
 
 #include "itkImageToImageFilter.h"
 #include "itkProgressReporter.h"
-#include "itkAnchorHistogram.h"
-
-//#define RAWHIST
+#include "itkAnchorErodeDilateLine.h"
 
 namespace itk {
-
-
 
 /** 
  * \class AnchorErodeDilateImageFilter
@@ -58,11 +54,9 @@ public:
 
   itkSetMacro(Size, unsigned int);
   itkGetConstReferenceMacro(Size, unsigned int);
-  itkBooleanMacro(Size);
 
   itkSetMacro(Direction, unsigned int);
   itkGetConstReferenceMacro(Direction, unsigned int);
-  itkBooleanMacro(Direction);
 
 
 protected:
@@ -80,57 +74,12 @@ private:
   void operator=(const Self&); //purposely not implemented
   unsigned int m_Size;
   unsigned int m_Direction;
-  TFunction1 m_TF1;
-  TFunction2 m_TF2;
 
-  typedef MorphologyHistogram<InputImagePixelType> Histogram;
-  typedef MorphologyHistogramVec<InputImagePixelType,THistogramCompare> VHistogram;
-  typedef MorphologyHistogramMap<InputImagePixelType,THistogramCompare> MHistogram;
+  // the class that operates on lines
+  typedef AnchorErodeDilateLine<InputImagePixelType, THistogramCompare, TFunction1, TFunction2> AnchorLineType;
 
-  bool startLine(OutputImagePixelType * buffer,
-		 OutputImagePixelType * inbuffer,
-		 OutputImagePixelType &Extreme,
-#ifdef RAWHIST
-		 unsigned int *  histo,
-#else
-		 Histogram &histo,
-#endif
-		 unsigned &outLeftP,
-		 unsigned &outRightP,
-		 unsigned &inLeftP,
-		 unsigned &inRightP,
-		 unsigned middle);
+  AnchorLineType AnchorLine;
 
-  bool finishLine(OutputImagePixelType * buffer,
-		  OutputImagePixelType * inbuffer,
-		  OutputImagePixelType &Extreme,
-		  Histogram &histo,
-		  unsigned &outLeftP,
-		  unsigned &outRightP,
-		  unsigned &inLeftP,
-		  unsigned &inRightP,
-		  unsigned middle);
-
-  bool useVectorBasedHistogram()
-  {
-    return(false);
-    // bool, short and char are acceptable for vector based algorithm: they do not require
-    // too much memory. Other types are not usable with that algorithm
-    return typeid(InputImagePixelType) == typeid(unsigned char)
-        || typeid(InputImagePixelType) == typeid(signed char)
-        || typeid(InputImagePixelType) == typeid(unsigned short)
-        || typeid(InputImagePixelType) == typeid(signed short)
-        || typeid(InputImagePixelType) == typeid(bool);
-    }
-
-
-  void check(unsigned val, unsigned start, unsigned end, std::string text=std::string(""))
-  {
-    if ((val < start) || (val >= end))
-      {
-      std::cout << "******************" << text << " " << val << std::endl;
-      }
-  }
 } ; // end of class
 
 
