@@ -5,8 +5,8 @@
 
 namespace itk {
 
-template <class TInputPix,  class THistogram, class TFunction1, class TFunction2>
-AnchorErodeDilateLine<TInputPix,  THistogram, TFunction1, TFunction2>
+template <class TInputPix, class TFunction1, class TFunction2>
+AnchorErodeDilateLine<TInputPix, TFunction1, TFunction2>
 ::AnchorErodeDilateLine()
 {
   m_Size=2;
@@ -21,9 +21,9 @@ AnchorErodeDilateLine<TInputPix,  THistogram, TFunction1, TFunction2>
     }
 }
 
-template <class TInputPix,  class THistogram, class TFunction1, class TFunction2>
+template <class TInputPix, class TFunction1, class TFunction2>
 void
-AnchorErodeDilateLine<TInputPix,  THistogram, TFunction1, TFunction2>
+AnchorErodeDilateLine<TInputPix, TFunction1, TFunction2>
 ::doLine(InputImagePixelType * buffer, InputImagePixelType * inbuffer, unsigned bufflength)
 {
   // TFunction1 will be < for erosions
@@ -35,7 +35,24 @@ AnchorErodeDilateLine<TInputPix,  THistogram, TFunction1, TFunction2>
   // closing, and then copy the result to the output. Hopefully this
   // will improve cache performance when working along non raster
   // directions.
+  if (bufflength <= m_Size)
+    {
+    // No point doing anything fancy - just look for the extreme value
+    // This is important when operating near the corner of images with
+    // angled structuring elements 
+    InputImagePixelType Extreme = inbuffer[0];
+    for (unsigned i = 0;i < bufflength;i++) 
+      {
+      if (m_TF1(Extreme, inbuffer[i]))
+	Extreme = inbuffer[i];
+      }
 
+    for (unsigned i = 0;i < bufflength;i++) 
+      {
+      buffer[i] = Extreme;
+      }
+    return;
+    }
 
   unsigned int middle = m_Size/2;
 
@@ -47,7 +64,7 @@ AnchorErodeDilateLine<TInputPix,  THistogram, TFunction1, TFunction2>
   // Left border, first half of structuring element
   Extreme = inbuffer[inLeftP];
   m_Histo->AddPixel(Extreme);
-  for (unsigned i = 0; i < middle; i++)
+  for (unsigned i = 0; (i < middle); i++)
     {
     ++inLeftP;
     m_Histo->AddPixel(inbuffer[inLeftP]);
@@ -75,6 +92,9 @@ AnchorErodeDilateLine<TInputPix,  THistogram, TFunction1, TFunction2>
     {
     ++inLeftP;
     ++outLeftP;
+    if ((inLeftP - m_Size) < 0) 
+      {
+      }
     m_Histo->RemovePixel(inbuffer[inLeftP - m_Size]);
     m_Histo->AddPixel(inbuffer[inLeftP]);
     Extreme = m_Histo->GetValue();
@@ -88,9 +108,9 @@ AnchorErodeDilateLine<TInputPix,  THistogram, TFunction1, TFunction2>
 
 }
 
-template<class TInputPix,  class THistogram, class TFunction1, class TFunction2>
+template<class TInputPix, class TFunction1, class TFunction2>
 bool
-AnchorErodeDilateLine<TInputPix,  THistogram, TFunction1, TFunction2>
+AnchorErodeDilateLine<TInputPix, TFunction1, TFunction2>
 ::startLine(InputImagePixelType * buffer,
 	    InputImagePixelType * inbuffer,
 	    InputImagePixelType &Extreme,
@@ -193,9 +213,9 @@ AnchorErodeDilateLine<TInputPix,  THistogram, TFunction1, TFunction2>
   return(false);
 }
 
-template<class TInputPix,  class THistogram, class TFunction1, class TFunction2>
+template<class TInputPix, class TFunction1, class TFunction2>
 bool
-AnchorErodeDilateLine<TInputPix,  THistogram, TFunction1, TFunction2>
+AnchorErodeDilateLine<TInputPix, TFunction1, TFunction2>
 ::finishLine(InputImagePixelType * buffer,
 	     InputImagePixelType * inbuffer,
 	     InputImagePixelType &Extreme,
@@ -252,9 +272,9 @@ AnchorErodeDilateLine<TInputPix,  THistogram, TFunction1, TFunction2>
   
 }
 
-template<class TInputPix, class THistogram, class TFunction1, class TFunction2>
+template<class TInputPix, class TFunction1, class TFunction2>
 void
-AnchorErodeDilateLine<TInputPix, THistogram, TFunction1, TFunction2>
+AnchorErodeDilateLine<TInputPix, TFunction1, TFunction2>
 ::PrintSelf(std::ostream &os, Indent indent) const
 {
   os << indent << "Size: " << m_Size << std::endl;

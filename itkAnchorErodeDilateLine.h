@@ -12,8 +12,7 @@ namespace itk {
  * appropriate definitions of greater, less and so on
 
 **/
-template<class TInputPix, class THistogramCompare,
-	 class TFunction1, class TFunction2>
+template<class TInputPix, class TFunction1, class TFunction2>
 class ITK_EXPORT AnchorErodeDilateLine
 {
 public:
@@ -45,8 +44,8 @@ private:
   bool m_useVec;
 
   typedef MorphologyHistogram<InputImagePixelType> Histogram;
-  typedef MorphologyHistogramVec<InputImagePixelType,THistogramCompare> VHistogram;
-  typedef MorphologyHistogramMap<InputImagePixelType,THistogramCompare> MHistogram;
+  typedef MorphologyHistogramVec<InputImagePixelType,TFunction1> VHistogram;
+  typedef MorphologyHistogramMap<InputImagePixelType,TFunction1> MHistogram;
 
   bool startLine(InputImagePixelType * buffer,
 		 InputImagePixelType * inbuffer,
@@ -70,7 +69,6 @@ private:
 
   bool useVectorBasedHistogram()
   {
-    return(false);
     // bool, short and char are acceptable for vector based algorithm: they do not require
     // too much memory. Other types are not usable with that algorithm
     return typeid(InputImagePixelType) == typeid(unsigned char)

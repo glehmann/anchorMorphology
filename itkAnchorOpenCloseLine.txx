@@ -35,6 +35,23 @@ AnchorOpenCloseLine<TInputPix, THistogramCompare, TFunction1, TFunction2>
   // closing, and then copy the result to the output. Hopefully this
   // will improve cache performance when working along non raster
   // directions.
+  if (bufflength <= m_Size)
+    {
+    // No point doing anything fancy - just look for the extreme value
+    // This is important for angled structuring elements
+    InputImagePixelType Extreme = buffer[0];
+    for (unsigned i = 0;i < bufflength;i++) 
+      {
+      if (m_TF1(Extreme, buffer[i]))
+	Extreme = buffer[i];
+      }
+
+    for (unsigned i = 0;i < bufflength;i++) 
+      {
+      buffer[i] = Extreme;
+      }
+    return;
+    }
 
 
   // start the real work - everything here will be done with index

@@ -35,7 +35,7 @@ typename BresenhamLine<VDimension>::OffsetArray BresenhamLine<VDimension>
   OffsetArray result(length);
   
   IndexType m_CurrentImageIndex, StartIndex, LastIndex;
-
+  Direction.Normalize();
   // we are going to start at 0
   m_CurrentImageIndex.Fill(0);
   StartIndex.Fill(0);

@@ -4,6 +4,7 @@
 #include "itkImageToImageFilter.h"
 #include "itkProgressReporter.h"
 #include "itkAnchorErodeDilateLine.h"
+#include "itkBresenhamLine.h"
 
 namespace itk {
 
@@ -14,36 +15,36 @@ namespace itk {
  * appropriate definitions of greater, less and so on
 
 **/
-template<class TInputImage, class TOutputImage, class THistogramCompare,
+template<class TImage, class TKernel, 
 	 class TFunction1, class TFunction2>
 class ITK_EXPORT AnchorErodeDilateImageFilter :
-    public ImageToImageFilter<TInputImage, TOutputImage>
+    public ImageToImageFilter<TImage, TImage>
 {
 public:
   /** Standard class typedefs. */
   typedef AnchorErodeDilateImageFilter Self;
-  typedef ImageToImageFilter<TInputImage, TOutputImage>
+  typedef ImageToImageFilter<TImage, TImage>
   Superclass;
   typedef SmartPointer<Self>        Pointer;
   typedef SmartPointer<const Self>  ConstPointer;
 
   /** Some convenient typedefs. */
-  typedef TInputImage InputImageType;
-  typedef TOutputImage OutputImageType;
+  /** Kernel typedef. */
+  typedef TKernel KernelType;
+
+  typedef TImage InputImageType;
   typedef typename InputImageType::Pointer         InputImagePointer;
   typedef typename InputImageType::ConstPointer    InputImageConstPointer;
   typedef typename InputImageType::RegionType      InputImageRegionType;
   typedef typename InputImageType::PixelType       InputImagePixelType;
-  typedef typename OutputImageType::Pointer        OutputImagePointer;
-  typedef typename OutputImageType::ConstPointer   OutputImageConstPointer;
-  typedef typename OutputImageType::RegionType     OutputImageRegionType;
-  typedef typename OutputImageType::PixelType      OutputImagePixelType;
+  typedef typename TImage::IndexType         IndexType;
+  typedef typename TImage::SizeType          SizeType;
 
   /** ImageDimension constants */
   itkStaticConstMacro(InputImageDimension, unsigned int,
-                      TInputImage::ImageDimension);
+                      TImage::ImageDimension);
   itkStaticConstMacro(OutputImageDimension, unsigned int,
-                      TOutputImage::ImageDimension);
+                      TImage::ImageDimension);
 
   /** Standard New method. */
   itkNewMacro(Self);
@@ -52,11 +53,12 @@ public:
   itkTypeMacro(AnchorErodeDilateImageFilter,
                ImageToImageFilter);
 
-  itkSetMacro(Size, unsigned int);
-  itkGetConstReferenceMacro(Size, unsigned int);
+  void SetKernel( const KernelType& kernel )
+  {
+    m_Kernel=kernel;
+    m_KernelSet = true;
+  }
 
-  itkSetMacro(Direction, unsigned int);
-  itkGetConstReferenceMacro(Direction, unsigned int);
 
 
 protected:
@@ -72,13 +74,24 @@ protected:
 private:
   AnchorErodeDilateImageFilter(const Self&); //purposely not implemented
   void operator=(const Self&); //purposely not implemented
-  unsigned int m_Size;
-  unsigned int m_Direction;
+
+  TKernel m_Kernel;
+  bool m_KernelSet;
+  typedef BresenhamLine<TImage::ImageDimension> BresType;
 
   // the class that operates on lines
-  typedef AnchorErodeDilateLine<InputImagePixelType, THistogramCompare, TFunction1, TFunction2> AnchorLineType;
+  typedef AnchorErodeDilateLine<InputImagePixelType, TFunction1, TFunction2> AnchorLineType;
 
   AnchorLineType AnchorLine;
+#if 0
+  void doFace(typename TImage::ConstPointer input,
+	      typename TImage::Pointer output,
+	      const typename BresType::OffsetArray LineOffsets,
+	      InputImagePixelType * inbuffer,
+	      InputImagePixelType * outbuffer,	      
+	      const OutputImageRegionType AllImage, 
+	      const OutputImageRegionType face);
+#endif
 
 } ; // end of class
 

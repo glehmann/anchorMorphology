@@ -2,25 +2,37 @@
 #define __itkAnchorErodeDilateImageFilter_txx
 
 #include "itkAnchorErodeDilateImageFilter.h"
-#include "itkImageLinearConstIteratorWithIndex.h"
-#include "itkImageLinearIteratorWithIndex.h"
+
+//#include "itkNeighborhoodAlgorithm.h"
+
+#include "itkAnchorUtilities.h"
 
 namespace itk {
 
-template <class TInputImage, class TOutputImage, class THistogramCompare, class TFunction1, class TFunction2>
-AnchorErodeDilateImageFilter<TInputImage, TOutputImage, THistogramCompare, TFunction1, TFunction2>
+template <class TImage, class TKernel, class TFunction1, class TFunction2>
+AnchorErodeDilateImageFilter<TImage, TKernel, TFunction1, TFunction2>
 ::AnchorErodeDilateImageFilter()
 {
-  m_Direction = 0;
-  m_Size=2;
-  AnchorLine.SetSize(m_Size);
+  m_KernelSet = false;
 }
 
-template <class TInputImage, class TOutputImage, class THistogramCompare, class TFunction1, class TFunction2>
+template <class TImage, class TKernel, class TFunction1, class TFunction2>
 void
-AnchorErodeDilateImageFilter<TInputImage, TOutputImage, THistogramCompare, TFunction1, TFunction2>
+AnchorErodeDilateImageFilter<TImage, TKernel, TFunction1, TFunction2>
 ::GenerateData()
 {
+
+  // check that we are using a decomposable kernel
+  if (!m_Kernel.Decomposable())
+    {
+    itkWarningMacro("Anchor morphology only works with decomposable structuring elements");
+    return;
+    }
+  if (!m_KernelSet)
+    {
+    itkWarningMacro("No kernel set - quitting");
+    return;
+    }
   // TFunction1 will be < for erosions
   // TFunction2 will be <=
 
@@ -33,72 +45,86 @@ AnchorErodeDilateImageFilter<TInputImage, TOutputImage, THistogramCompare, TFunc
 
   // Allocate the output
   this->AllocateOutputs();
-  typename TOutputImage::Pointer output = this->GetOutput();
-  typename TInputImage::ConstPointer input = this->GetInput();
+  InputImagePointer output = this->GetOutput();
+  InputImageConstPointer input = this->GetInput();
 
-  AnchorLine.SetSize(m_Size);
-  
   // get the region size
-  OutputImageRegionType OReg = output->GetRequestedRegion();
-  unsigned int bufflength = OReg.GetSize()[m_Direction];
-  unsigned linecount = OReg.GetNumberOfPixels()/bufflength;
-  ProgressReporter progress(this, 0, linecount);
+  InputImageRegionType OReg = output->GetRequestedRegion();
+  // maximum buffer length is sum of dimensions
+  unsigned int bufflength = 0;
+  for (unsigned i = 0; i<TImage::ImageDimension; i++)
+    {
+    bufflength += OReg.GetSize()[i];
+    }
+  
+  ProgressReporter progress(this, 0, OReg.GetNumberOfPixels());
 
   InputImagePixelType * buffer = new InputImagePixelType[bufflength];
   InputImagePixelType * inbuffer = new InputImagePixelType[bufflength];
+  // typedef typename itk::NeighborhoodAlgorithm::ImageBoundaryFacesCalculator<TImage> FaceCalculatorType;
+  // FaceCalculatorType faceCalculator;
+  // typename FaceCalculatorType::FaceListType faceList;
+  // typename TImage::SizeType faceRadius;
+  // faceRadius.Fill(1);
+  // faceList = faceCalculator(input, output->GetRequestedRegion(), faceRadius);
+  // typename FaceCalculatorType::FaceListType::iterator fit;
 
-  // set up a line iterator
-  typedef itk::ImageLinearConstIteratorWithIndex<InputImageType> InputLineIteratorType;
-  typedef itk::ImageLinearIteratorWithIndex<OutputImageType> OutputLineIteratorType;
+  // ignore the body region
+  // fit = faceList.begin();
+  // ++fit;
 
-  InputLineIteratorType inLineIt(input, output->GetRequestedRegion());
-  inLineIt.SetDirection(m_Direction);
-  OutputLineIteratorType outLineIt(output, output->GetRequestedRegion());
-  outLineIt.SetDirection(m_Direction);
+  // iterate over all the structuring elements
+  typename KernelType::DecompType decomposition = m_Kernel.GetDecomp();
+  BresType BresLine;
 
-
-  for (inLineIt.GoToBegin(), outLineIt.GoToBegin(); ! inLineIt.IsAtEnd(); inLineIt.NextLine(),outLineIt.NextLine())
+  for (unsigned i = 0; i < decomposition.size(); i++)
     {
-    // copy the line to the buffer
-    inLineIt.GoToBeginOfLine();
-    unsigned pos = 0;
-    while (! inLineIt.IsAtEndOfLine())
-      {
-      InputImagePixelType PVal = (inLineIt.Get());
-//      buffer[pos]=PVal;
-      inbuffer[pos]=PVal;
-      ++pos; 
-      ++inLineIt;
-      }
-    // done copying
-    // start the real work - everything here will be done with index
-    AnchorLine.doLine(buffer, inbuffer, bufflength);
+    typename KernelType::LType ThisLine = decomposition[i];
+    typename BresType::OffsetArray TheseOffsets = BresLine.buildLine(ThisLine, bufflength);
+    unsigned int SELength = getLinePixels<typename KernelType::LType>(ThisLine);
+    // want lines to be odd
+    if (!(SELength%2))
+      ++SELength;
+      
+    std::cout << "SE length " << SELength << std::endl;
+    AnchorLine.SetSize(SELength);
+    // collect the faces that we need to process
+    // typename FaceCalculatorType::FaceListType ThisFaceList;
+    //std::cout << ThisLine << " " << SELength << std::endl;
+    // ignore the body region
+    typedef typename std::list<InputImageRegionType> FaceListType;
+    typedef typename FaceListType::iterator FaceListIterator;
+    FaceListType faceList;
+    FaceListIterator fit;
+    // Now figure out which faces of the image we should be starting
+    // from with this line
+    faceList = mkFaceList<InputImageRegionType, typename KernelType::LType>(OReg, ThisLine);
 
-    // copy the buffer to output
-    inLineIt.GoToBeginOfLine();
-    pos = 0;
-    while (! outLineIt.IsAtEndOfLine())
+    for ( fit = faceList.begin(); fit != faceList.end(); ++fit)
       {
-      outLineIt.Set(static_cast<OutputImagePixelType>(buffer[pos]));
-      ++pos;
-      ++outLineIt;
+      std::cout << ThisLine << std::endl;
+      std::cout << (*fit) << std::endl;
+      doFace<TImage, BresType, AnchorLineType>(input, output, AnchorLine,
+					       TheseOffsets, inbuffer, buffer, 
+					       OReg, *fit);
       }
-    // done with this line
-    progress.CompletedPixel();
+    std::cout << "-------------------" << std::endl;
+    // after the first pass the input will be taken from the output
+    input = this->GetOutput();
     }
+
 
   delete [] buffer;
   delete [] inbuffer;
 }
 
-template<class TInputImage, class TOutputImage, class THistogramCompare, class TFunction1, class TFunction2>
+
+template<class TImage, class TKernel, class TFunction1, class TFunction2>
 void
-AnchorErodeDilateImageFilter<TInputImage, TOutputImage, THistogramCompare, TFunction1, TFunction2>
+AnchorErodeDilateImageFilter<TImage, TKernel, TFunction1, TFunction2>
 ::PrintSelf(std::ostream &os, Indent indent) const
 {
   Superclass::PrintSelf(os, indent);
-  os << indent << "Direction: " << m_Direction << std::endl;
-  os << indent << "Size: " << m_Size << std::endl;
 }
 
 

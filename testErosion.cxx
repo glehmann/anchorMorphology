@@ -2,8 +2,9 @@
 #include "itkImageFileWriter.h"
 #include "itkCommand.h"
 #include "itkSimpleFilterWatcher.h"
+#include "itkFlatStructuringElement.h"
 
-#include "itkAnchorErodeDilateImageFilter.h"
+#include "itkAnchorErodeImageFilter.h"
 
 int main(int, char * argv[])
 {
@@ -11,17 +12,22 @@ int main(int, char * argv[])
   
   typedef unsigned char PType;
   typedef itk::Image< PType, dim > IType;
-
+                                                                                                         
   typedef itk::ImageFileReader< IType > ReaderType;
   ReaderType::Pointer reader = ReaderType::New();
   reader->SetFileName( argv[1] );
 
+  typedef itk::FlatStructuringElement<dim> SEType;
 
-  typedef itk::AnchorErodeDilateImageFilter< IType, IType, std::less<PType>, std::less<PType>, 
-    std::less_equal<PType> > FilterType;
+  typedef itk::AnchorErodeImageFilter<IType, SEType> FilterType;
+
   FilterType::Pointer filter = FilterType::New();
   filter->SetInput( reader->GetOutput() );
-  filter->SetSize(11);
+  SEType::RadiusType Rad;
+  Rad.Fill(11);
+  SEType K = SEType::Poly(Rad, 4);
+
+  filter->SetKernel(K);
   itk::SimpleFilterWatcher watcher(filter, "filter");
 
   typedef itk::ImageFileWriter< IType > WriterType;

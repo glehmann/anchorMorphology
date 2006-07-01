@@ -2,9 +2,10 @@
 #include "itkImageFileWriter.h"
 #include "itkCommand.h"
 #include "itkSimpleFilterWatcher.h"
+#include "itkFlatStructuringElement.h"
 
-#include "itkAnchorOpenCloseImageFilter.h"
-//#include "itkAnchorHistogram.h"
+#include "itkAnchorOpenImageFilter.h"
+#include "itkIndent.h"
 
 int main(int, char * argv[])
 {
@@ -17,14 +18,19 @@ int main(int, char * argv[])
   ReaderType::Pointer reader = ReaderType::New();
   reader->SetFileName( argv[1] );
 
-//  typedef itk::MorphologyHistogramVec< PType, std::less<PType> > HistType;
+  typedef itk::FlatStructuringElement<dim> SEType;
 
-  typedef itk::AnchorOpenCloseImageFilter< IType, IType, std::less<PType> ,
-    std::greater_equal<PType>, 
-    std::less_equal<PType> > FilterType;
+  typedef itk::AnchorOpenImageFilter< IType, SEType > FilterType;
+
   FilterType::Pointer filter = FilterType::New();
   filter->SetInput( reader->GetOutput() );
-  filter->SetSize(11);
+  SEType::RadiusType Rad;
+  Rad.Fill(11);
+  SEType K = SEType::Poly(Rad, 4);
+  K.PrintSelf(std::cout, itk::Indent(0));
+  filter->SetKernel(K);
+
+
   itk::SimpleFilterWatcher watcher(filter, "filter");
 
   typedef itk::ImageFileWriter< IType > WriterType;
