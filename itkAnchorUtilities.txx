@@ -3,6 +3,7 @@
 
 #include "itkAnchorUtilities.h"
 #include "itkImageRegionConstIteratorWithIndex.h"
+#include "itkImageRegionConstIterator.h"
 namespace itk {
 
 /**
@@ -70,13 +71,24 @@ void fillLineBuffer(typename TImage::ConstPointer input,
   // the box
   unsigned int maxPos= LineOffsets.size() - 1, minPos = 0;
   unsigned int lastPos;
+  //unsigned loops = 0;
   while (true)
     {
     unsigned int pos = (int)floor((double)(maxPos - minPos))/2 + minPos;
     typename TImage::IndexType Ind = StartIndex + LineOffsets[pos];
     typename TImage::IndexType IndN = StartIndex + LineOffsets[pos+1];
     bool I1 = AllImage.IsInside(Ind);
-    bool I2 = !AllImage.IsInside(IndN);
+    bool I2;
+    //++loops;
+    if (I1) 
+      {
+      I2 = !AllImage.IsInside(IndN);
+      }
+    else
+      {
+      maxPos = pos - 1;
+      continue;
+      }
 
     if (I1 && I2) 
       {
@@ -94,25 +106,38 @@ void fillLineBuffer(typename TImage::ConstPointer input,
       maxPos = pos - 1;
       }
     }
+  //std::cout << "Border found in " << loops << std::endl;
   // now copy into the buffer
   len = lastPos + 1;
+#if 1
   for (unsigned i = 0; i <= lastPos;i++)
     {
     inbuffer[i] = input->GetPixel(StartIndex + LineOffsets[i]);
     }
-
+#else
+  typedef ImageRegionConstIterator<TImage> ItType;
+  ItType it(input, AllImage);
+  it.SetIndex(StartIndex);
+  for (unsigned i = 0; i < lastPos;i++)
+    {
+    inbuffer[i]= it.Get();
+    typename TImage::IndexType I = StartIndex + LineOffsets[i];
+    typename TImage::OffsetType O = I - it.GetIndex();
+    //it += O;
+    }
+#endif
 }
 
 template <class TImage, class TBres>
-void copyLineToImage(typename TImage::Pointer output,
+void copyLineToImage(const typename TImage::Pointer output,
 		     const typename TImage::IndexType StartIndex,
 		     const typename TBres::OffsetArray LineOffsets,
-		     typename TImage::PixelType * outbuffer,
-		     unsigned len)
+		     const typename TImage::PixelType * outbuffer,
+		     const unsigned len)
 {
   for (unsigned i = 0; i < len;i++)
     {
-    output->SetPixel(StartIndex + LineOffsets[i], static_cast<typename TImage::PixelType>(outbuffer[i]));
+    output->SetPixel(StartIndex + LineOffsets[i], outbuffer[i]);
     }
 
 }

@@ -78,6 +78,14 @@ SET(CurrentExe "testDecomposition2D")
 ADD_EXECUTABLE(${CurrentExe} ${CurrentExe}.cxx)
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 
+SET(CurrentExe "testDecomposition3D")
+ADD_EXECUTABLE(${CurrentExe} ${CurrentExe}.cxx)
+TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
+
+SET(CurrentExe "perf2D")
+ADD_EXECUTABLE(${CurrentExe} ${CurrentExe}.cxx)
+TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
+
 
 ENDIF(BUILD_TESTING)
 
@@ -89,5 +97,23 @@ ENDIF(BUILD_TESTING)
 #any tests you can comment out or delete the following line.
 # ADD_TEST(Testname ExecutableToRun arg1 arg2 arg3)
 
-ADD_TEST(Run check ${INPUT_IMAGE} out.png)
-ADD_TEST(CompareImage ${IMAGE_COMPARE} out.png ${CMAKE_SOURCE_DIR}/images/test.png)
+#ADD_TEST(Run check ${INPUT_IMAGE} out.png)
+#ADD_TEST(CompareImage ${IMAGE_COMPARE} out.png ${CMAKE_SOURCE_DIR}/images/test.png)
+
+ADD_TEST(Decomp2D_3 testDecomposition2D 3 15 15 decomp2D_3.png)
+ADD_TEST(Decomp2D_4 testDecomposition2D 4 15 15 decomp2D_4.png)
+ADD_TEST(Decomp2D_6 testDecomposition2D 6 21 21 decomp2D_6.png)
+ADD_TEST(Decomp2D_8 testDecomposition2D 8 21 21 decomp2D_8.png)
+ADD_TEST(Decomp2D_12 testDecomposition2D 12 31 31 decomp2D_12.png)
+
+ADD_TEST(Decomp2DE_3 testDecomposition2D 3 15 11 decomp2DE_3.png)
+ADD_TEST(Decomp2DE_4 testDecomposition2D 4 15 11 decomp2DE_4.png)
+ADD_TEST(Decomp2DE_6 testDecomposition2D 6 21 31 decomp2DE_6.png)
+ADD_TEST(Decomp2DE_8 testDecomposition2D 8 21 31 decomp2DE_8.png)
+ADD_TEST(Decomp2DE_12 testDecomposition2D 12 31 41 decomp2DE_12.png)
+
+ADD_TEST(Decomp3D_3 testDecomposition3D 6 15 15 15 decomp3D_6.tif)
+#ADD_TEST(Decomp3D_4 testDecomposition3D 4 15 15 15 decomp3D_4.png)
+#ADD_TEST(Decomp3D_6 testDecomposition3D 6 21 21 21 decomp3D_6.png)
+#ADD_TEST(Decomp3D_8 testDecomposition3D 8 21 21 21 decomp3D_8.png)
+#ADD_TEST(Decomp3D_12 testDecomposition3D 12 31 31 31 decomp3D_12.png)

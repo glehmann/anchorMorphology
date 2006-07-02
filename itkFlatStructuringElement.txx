@@ -73,38 +73,108 @@ FlatStructuringElement<VDimension> FlatStructuringElement<VDimension>
   // sides, each side with length k, where k is the structuring
   // element length. Therefore the value of k we need to produce the
   // radius we want is: (M_PI * rr * 2)/(2*lines*2)
-  float k = (M_PI * (float)rr)/((float)lines);
-  std::cout << "k= " << k << std::endl;
+  float k1 = (M_PI * (float)radius[0])/((float)lines);
+  float k2 = (M_PI * (float)radius[1])/((float)lines);
+  //std::cout << "k= " << k << std::endl;
   float theta, step;
-  theta = 0;
   step = M_PI/lines;
-  while (theta < M_PI) 
+  theta = 0;
+  // just to ensure that we get the last one
+  while (theta <= M_PI/2.0 + 0.0001)
     {
-//    std::cout << "theta= " << theta << std::endl;
     LType O;
-    O[0]= k * cos(theta);
-    O[1]= k * sin(theta);
-    if (res.checkParallel(O, res.m_Lines))
+    O[0] = k1 * cos(theta);
+    O[1] = k2 * sin(theta);
+    if (!res.checkParallel(O, res.m_Lines))
       {
-      std::cout << "Already have this line" << std::endl;
-      }
-    else
-      {
-      std::cout << O << std::endl;
+      //std::cout << O << std::endl;
       res.m_Lines.push_back(O);
       }
-    theta += step;
+     O[0] = k1 * cos(-theta);
+     O[1] = k2 * sin(-theta);
+     if (!res.checkParallel(O, res.m_Lines))
+       {
+       //std::cout << O << std::endl;
+       res.m_Lines.push_back(O);
+       }
+     theta += step;
+     //std::cout << "theta1 = " << theta << " " << M_PI/2.0 << std::endl;
     }
     
   return(res);
 }
 
+//    O[0] = k1 * cos(phi) * cos(theta);
+//    O[1] = k2 * cos(phi) * sin(theta);
+//    O[2] = k3 * sin(theta);
+
 template<unsigned int VDimension>
 FlatStructuringElement<VDimension> FlatStructuringElement<VDimension>
 ::PolySub(const Dispatch<3> &, RadiusType radius, unsigned lines) const
 {
+  FlatStructuringElement res = FlatStructuringElement();
+  res.m_Decomposition = true;
   std::cout << "3 dimensions" << std::endl;
+  unsigned int rr = 0;
+  for (unsigned i=0;i<VDimension;i++)
+    {
+    if (radius[i] > rr) rr = radius[i];
+    }
+  float k1 = (M_PI * (float)radius[0])/((float)lines);
+  float k2 = (M_PI * (float)radius[1])/((float)lines);
+  float k3 = (M_PI * (float)radius[2])/((float)lines);
+  float theta, step;
+  step = M_PI/lines;
+  theta = 0.0;
+  // just to ensure that we get the last one
+  while (theta <= M_PI/2.0 + 0.0001)
+    {
+    LType O;
+    // x-y plane
+    O[0] = k1 * cos(theta);
+    O[1] = k2 * sin(theta);    
+    O[2] = 0;
+    if (!res.checkParallel(O, res.m_Lines))
+      {
+      std::cout << O << std::endl;
+      res.m_Lines.push_back(O);
+      }
+    O[0] = k1 * cos(-theta);
+    O[1] = k2 * sin(-theta);    
+    O[2] = 0;
+    if (!res.checkParallel(O, res.m_Lines))
+      {
+      std::cout << O << std::endl;
+      res.m_Lines.push_back(O);
+      }
 
+    // x-z plane
+    O[0] = k1 * cos(theta);
+    O[1] = 0;
+    O[2] = k3 * sin(theta);    
+
+    if (!res.checkParallel(O, res.m_Lines))
+      {
+      std::cout << O << std::endl;
+      res.m_Lines.push_back(O);
+      }
+
+    O[0] = k1 * cos(-theta);
+    O[1] = 0;
+    O[2] = k3 * sin(-theta);    
+
+    if (!res.checkParallel(O, res.m_Lines))
+      {
+      std::cout << O << std::endl;
+      res.m_Lines.push_back(O);
+      }
+
+     theta += step;
+     //phi += step;
+     //std::cout << "theta1 = " << theta << " " << M_PI/2.0 << std::endl;
+    }
+    
+  return(res);
 }
 
 template<unsigned int VDimension>
@@ -134,16 +204,6 @@ FlatStructuringElement<VDimension> FlatStructuringElement<VDimension>
   return(res);
 }
 
-template<unsigned int VDimension>
-typename FlatStructuringElement<VDimension>::LType FlatStructuringElement<VDimension>
-::mkOffset(float phi, float theta)
-{
-  LType res;
-  res[0] = cos(phi)*cos(theta);
-  res[1] = cos(phi)*sin(theta);
-  res[2] = sin(theta);
-  return res;
-}
 
 template<unsigned int VDimension>
 bool

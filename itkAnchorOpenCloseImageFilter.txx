@@ -48,80 +48,76 @@ AnchorOpenCloseImageFilter<TImage, TKernel, LessThan, GreaterThan, LessEqual, Gr
     bufflength += OReg.GetSize()[i];
     }
 
-  unsigned linecount = OReg.GetNumberOfPixels()/bufflength;
-  ProgressReporter progress(this, 0, linecount);
+  //unsigned linecount = OReg.GetNumberOfPixels()/bufflength;
 
   InputImagePixelType * inbuffer = new InputImagePixelType[bufflength];
   InputImagePixelType * outbuffer = new InputImagePixelType[bufflength];
 
-  typedef typename itk::NeighborhoodAlgorithm::ImageBoundaryFacesCalculator<TImage> FaceCalculatorType;
-  FaceCalculatorType faceCalculator;
-  typename FaceCalculatorType::FaceListType faceList;
-  typename TImage::SizeType faceRadius;
-  faceRadius.Fill(1);
-  faceList = faceCalculator(input, output->GetRequestedRegion(), faceRadius);
-  typename FaceCalculatorType::FaceListType::iterator fit;
-
-  // ignore the body region
-  fit = faceList.begin();
-  ++fit;
-
   // iterate over all the structuring elements
   typename KernelType::DecompType decomposition = m_Kernel.GetDecomp();
   BresType BresLine;
+  ProgressReporter progress(this, 0, decomposition.size()*2);
 
   // first stage -- all of the erosions if we are doing an opening
   for (unsigned i = 0; i < decomposition.size() - 1; i++)
     {
     typename KernelType::LType ThisLine = decomposition[i];
     typename BresType::OffsetArray TheseOffsets = BresLine.buildLine(ThisLine, bufflength);
-    unsigned int SELength = (int)ThisLine.GetNorm();
+    unsigned int SELength = getLinePixels<typename KernelType::LType>(ThisLine);
+    // want lines to be odd
+    if (!(SELength%2))
+      ++SELength;
     AnchorLineErode.SetSize(SELength);
-    //std::cout << ThisLine << " " << SELength << std::endl;
-    // ignore the body region
-    fit = faceList.begin();
-    ++fit;
+    typedef typename std::list<InputImageRegionType> FaceListType;
+    typedef typename FaceListType::iterator FaceListIterator;
+    FaceListType faceList;
+    FaceListIterator fit;
     // Now figure out which faces of the image we should be starting
     // from with this line
-    for (; fit != faceList.end(); ++fit)
-      {
-      // if the line from the beginning or the end of the face
-      // intersects the image then we need to process this face
-      if (needToDoFace<InputImageRegionType, typename KernelType::LType>(OReg, *fit, ThisLine)) 
-	{
-	doFace<TImage, BresType, AnchorLineErodeType>(input, output, AnchorLineErode,
-							   TheseOffsets, inbuffer, outbuffer, 
-							   OReg, *fit);
+    faceList = mkFaceList<InputImageRegionType, typename KernelType::LType>(OReg, ThisLine);
 
-	}
+    for ( fit = faceList.begin(); fit != faceList.end(); ++fit)
+      {
+      //std::cout << ThisLine << std::endl;
+      //std::cout << (*fit) << std::endl;
+      doFace<TImage, BresType, AnchorLineErodeType>(input, output, AnchorLineErode,
+						    TheseOffsets, inbuffer, outbuffer, 
+						    OReg, *fit);
       }
+    //std::cout << "-------------------" << std::endl;
     // after the first pass the input will be taken from the output
     input = this->GetOutput();
+    progress.CompletedPixel();
     }
   // now do the opening in the middle of the chain
   {
   unsigned i = decomposition.size() - 1;
   typename KernelType::LType ThisLine = decomposition[i];
   typename BresType::OffsetArray TheseOffsets = BresLine.buildLine(ThisLine, bufflength);
-  unsigned int SELength = (int)ThisLine.GetNorm();
+  unsigned int SELength = getLinePixels<typename KernelType::LType>(ThisLine);
+  // want lines to be odd
+  if (!(SELength%2))
+    ++SELength;
+
   AnchorLineOpen.SetSize(SELength);
-    // ignore the body region
-  fit = faceList.begin();
-  ++fit;
+
+  typedef typename std::list<InputImageRegionType> FaceListType;
+  typedef typename FaceListType::iterator FaceListIterator;
+  FaceListType faceList;
+  FaceListIterator fit;
   // Now figure out which faces of the image we should be starting
   // from with this line
-  for (; fit != faceList.end(); ++fit)
+  faceList = mkFaceList<InputImageRegionType, typename KernelType::LType>(OReg, ThisLine);
+
+  for ( fit = faceList.begin(); fit != faceList.end(); ++fit)
     {
-    // if the line from the beginning or the end of the face
-    // intersects the image then we need to process this face
-    if (needToDoFace<InputImageRegionType, typename KernelType::LType>(OReg, *fit, ThisLine)) 
-      {
-      doFaceOpen(input, output,
-		 TheseOffsets, outbuffer, 
-		 OReg, *fit);
-      
-      }
+    doFaceOpen(input, output,
+	       TheseOffsets, outbuffer, 
+	       OReg, *fit);
     }
+  // equivalent to two passes
+  progress.CompletedPixel();
+  progress.CompletedPixel();  
   }
 
   // Now for the rest of the dilations -- note that i needs to be signed
@@ -129,28 +125,29 @@ AnchorOpenCloseImageFilter<TImage, TKernel, LessThan, GreaterThan, LessEqual, Gr
     {
     typename KernelType::LType ThisLine = decomposition[i];
     typename BresType::OffsetArray TheseOffsets = BresLine.buildLine(ThisLine, bufflength);
-    unsigned int SELength = (int)ThisLine.GetNorm();
+    unsigned int SELength = getLinePixels<typename KernelType::LType>(ThisLine);
+    // want lines to be odd
+    if (!(SELength%2))
+      ++SELength;
+  
     AnchorLineDilate.SetSize(SELength);
-
-    // ignore the body region
-    fit = faceList.begin();
-    ++fit;
+    typedef typename std::list<InputImageRegionType> FaceListType;
+    typedef typename FaceListType::iterator FaceListIterator;
+    FaceListType faceList;
+    FaceListIterator fit;
     // Now figure out which faces of the image we should be starting
     // from with this line
-    for (; fit != faceList.end(); ++fit)
-      {
-      // if the line from the beginning or the end of the face
-      // intersects the image then we need to process this face
-      if (needToDoFace<InputImageRegionType, typename KernelType::LType>(OReg, *fit, ThisLine)) 
-	{
-	doFace<TImage, BresType, AnchorLineDilateType>(input, output, AnchorLineDilate,
-							   TheseOffsets, inbuffer, outbuffer, 
-							   OReg, *fit);
+    faceList = mkFaceList<InputImageRegionType, typename KernelType::LType>(OReg, ThisLine);
 
-	}
+    for ( fit = faceList.begin(); fit != faceList.end(); ++fit)
+      {
+
+      doFace<TImage, BresType, AnchorLineDilateType>(input, output, AnchorLineDilate,
+						     TheseOffsets, inbuffer, outbuffer, 
+						     OReg, *fit);
+
       }
-    // after the first pass the input will be taken from the output
-    input = output;
+    progress.CompletedPixel();
     }
 
   delete [] inbuffer;

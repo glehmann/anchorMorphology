@@ -26,11 +26,11 @@ void fillLineBuffer(typename TImage::ConstPointer input,
 		    unsigned &len);
 
 template <class TImage, class TBres>
-void copyLineToImage(typename TImage::Pointer output,
+void copyLineToImage(const typename TImage::Pointer output,
 		     const typename TImage::IndexType StartIndex,
 		     const typename TBres::OffsetArray LineOffsets,
-		     typename TImage::PixelType * outbuffer,
-		     unsigned len);
+		     const typename TImage::PixelType * outbuffer,
+		     const unsigned len);
 
 template <class TImage, class TBres, class TAnchor>
 void doFace(typename TImage::ConstPointer input,

@@ -57,7 +57,6 @@ AnchorErodeDilateImageFilter<TImage, TKernel, TFunction1, TFunction2>
     bufflength += OReg.GetSize()[i];
     }
   
-  ProgressReporter progress(this, 0, OReg.GetNumberOfPixels());
 
   InputImagePixelType * buffer = new InputImagePixelType[bufflength];
   InputImagePixelType * inbuffer = new InputImagePixelType[bufflength];
@@ -76,6 +75,7 @@ AnchorErodeDilateImageFilter<TImage, TKernel, TFunction1, TFunction2>
   // iterate over all the structuring elements
   typename KernelType::DecompType decomposition = m_Kernel.GetDecomp();
   BresType BresLine;
+  ProgressReporter progress(this, 0, decomposition.size());
 
   for (unsigned i = 0; i < decomposition.size(); i++)
     {
@@ -86,7 +86,7 @@ AnchorErodeDilateImageFilter<TImage, TKernel, TFunction1, TFunction2>
     if (!(SELength%2))
       ++SELength;
       
-    std::cout << "SE length " << SELength << std::endl;
+    //std::cout << "SE length " << SELength << std::endl;
     AnchorLine.SetSize(SELength);
     // collect the faces that we need to process
     // typename FaceCalculatorType::FaceListType ThisFaceList;
@@ -102,15 +102,16 @@ AnchorErodeDilateImageFilter<TImage, TKernel, TFunction1, TFunction2>
 
     for ( fit = faceList.begin(); fit != faceList.end(); ++fit)
       {
-      std::cout << ThisLine << std::endl;
-      std::cout << (*fit) << std::endl;
+      //std::cout << ThisLine << std::endl;
+      //std::cout << (*fit) << std::endl;
       doFace<TImage, BresType, AnchorLineType>(input, output, AnchorLine,
 					       TheseOffsets, inbuffer, buffer, 
 					       OReg, *fit);
       }
-    std::cout << "-------------------" << std::endl;
+    //std::cout << "-------------------" << std::endl;
     // after the first pass the input will be taken from the output
     input = this->GetOutput();
+    progress.CompletedPixel();
     }
 
 
