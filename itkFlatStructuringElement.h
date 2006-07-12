@@ -78,9 +78,12 @@ private:
 					 RadiusType radius, 
 					 unsigned lines) const;
 
-  LType mkOffset(float phi, float theta);
 
   bool checkParallel(LType NewVec, DecompType Lines);
+
+  typedef struct {
+    LType P1, P2, P3;
+  } FacetType;
 
 };
 } // namespace itk

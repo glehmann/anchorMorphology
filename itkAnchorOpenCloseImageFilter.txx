@@ -68,23 +68,14 @@ AnchorOpenCloseImageFilter<TImage, TKernel, LessThan, GreaterThan, LessEqual, Gr
     if (!(SELength%2))
       ++SELength;
     AnchorLineErode.SetSize(SELength);
-    typedef typename std::list<InputImageRegionType> FaceListType;
-    typedef typename FaceListType::iterator FaceListIterator;
-    FaceListType faceList;
-    FaceListIterator fit;
-    // Now figure out which faces of the image we should be starting
-    // from with this line
-    faceList = mkFaceList<InputImageRegionType, typename KernelType::LType>(OReg, ThisLine);
 
-    for ( fit = faceList.begin(); fit != faceList.end(); ++fit)
-      {
-      //std::cout << ThisLine << std::endl;
-      //std::cout << (*fit) << std::endl;
-      doFace<TImage, BresType, AnchorLineErodeType>(input, output, AnchorLineErode,
-						    TheseOffsets, inbuffer, outbuffer, 
-						    OReg, *fit);
-      }
-    //std::cout << "-------------------" << std::endl;
+    InputImageRegionType BigFace = mkEnlargedFace<InputImageType, typename KernelType::LType>(input, OReg, ThisLine);
+    doFace<TImage, BresType, 
+      AnchorLineErodeType, 
+      typename KernelType::LType>(input, output, ThisLine, AnchorLineErode, 
+				  TheseOffsets, inbuffer, outbuffer, OReg, BigFace);
+    
+
     // after the first pass the input will be taken from the output
     input = this->GetOutput();
     progress.CompletedPixel();
@@ -100,21 +91,13 @@ AnchorOpenCloseImageFilter<TImage, TKernel, LessThan, GreaterThan, LessEqual, Gr
     ++SELength;
 
   AnchorLineOpen.SetSize(SELength);
+  InputImageRegionType BigFace = mkEnlargedFace<InputImageType, typename KernelType::LType>(input, OReg, ThisLine);
 
-  typedef typename std::list<InputImageRegionType> FaceListType;
-  typedef typename FaceListType::iterator FaceListIterator;
-  FaceListType faceList;
-  FaceListIterator fit;
   // Now figure out which faces of the image we should be starting
   // from with this line
-  faceList = mkFaceList<InputImageRegionType, typename KernelType::LType>(OReg, ThisLine);
-
-  for ( fit = faceList.begin(); fit != faceList.end(); ++fit)
-    {
-    doFaceOpen(input, output,
-	       TheseOffsets, outbuffer, 
-	       OReg, *fit);
-    }
+  doFaceOpen(input, output, ThisLine,
+	     TheseOffsets, outbuffer, 
+	     OReg, BigFace);
   // equivalent to two passes
   progress.CompletedPixel();
   progress.CompletedPixel();  
@@ -131,22 +114,14 @@ AnchorOpenCloseImageFilter<TImage, TKernel, LessThan, GreaterThan, LessEqual, Gr
       ++SELength;
   
     AnchorLineDilate.SetSize(SELength);
-    typedef typename std::list<InputImageRegionType> FaceListType;
-    typedef typename FaceListType::iterator FaceListIterator;
-    FaceListType faceList;
-    FaceListIterator fit;
-    // Now figure out which faces of the image we should be starting
-    // from with this line
-    faceList = mkFaceList<InputImageRegionType, typename KernelType::LType>(OReg, ThisLine);
 
-    for ( fit = faceList.begin(); fit != faceList.end(); ++fit)
-      {
+    InputImageRegionType BigFace = mkEnlargedFace<InputImageType, typename KernelType::LType>(input, OReg, ThisLine);
+    doFace<TImage, BresType, 
+      AnchorLineDilateType, 
+      typename KernelType::LType>(input, output, ThisLine, AnchorLineDilate, 
+				  TheseOffsets, inbuffer, outbuffer, OReg, BigFace);
 
-      doFace<TImage, BresType, AnchorLineDilateType>(input, output, AnchorLineDilate,
-						     TheseOffsets, inbuffer, outbuffer, 
-						     OReg, *fit);
-
-      }
+    
     progress.CompletedPixel();
     }
 
@@ -159,6 +134,7 @@ void
 AnchorOpenCloseImageFilter<TImage, TKernel, LessThan, GreaterThan, LessEqual, GreaterEqual>
 ::doFaceOpen(InputImageConstPointer input,
 	     InputImagePointer output,
+	     typename KernelType::LType line,
 	     typename BresType::OffsetArray LineOffsets,
 	     InputImagePixelType * outbuffer,	      
 	     const InputImageRegionType AllImage, 
@@ -168,13 +144,23 @@ AnchorOpenCloseImageFilter<TImage, TKernel, LessThan, GreaterThan, LessEqual, Gr
   typedef ImageRegionConstIteratorWithIndex<InputImageType> ItType;
   ItType it(input, face);
   it.GoToBegin();
+  typename KernelType::LType NormLine = line;
+  NormLine.Normalize();
+  // set a generous tolerance
+  float tol = 1.0/LineOffsets.size();
   while (!it.IsAtEnd()) 
     {
     typename TImage::IndexType Ind = it.GetIndex();
-    unsigned int len;
-    fillLineBuffer<TImage, BresType>(input, Ind, LineOffsets, AllImage, outbuffer, len);
-    AnchorLineOpen.doLine(outbuffer,len);
-    copyLineToImage<TImage, BresType>(output, Ind, LineOffsets, outbuffer, len);
+    unsigned start, end, len;
+    if (fillLineBuffer<TImage, BresType, typename KernelType::LType>(input, Ind, NormLine, 
+								     tol, LineOffsets, 
+								     AllImage, outbuffer, 
+								     start, end))
+      {
+      len = end - start + 1;
+      AnchorLineOpen.doLine(outbuffer,len);
+      copyLineToImage<TImage, BresType>(output, Ind, LineOffsets, outbuffer, start, end);
+      }
     ++it;
     }
 }

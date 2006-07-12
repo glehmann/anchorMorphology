@@ -92,9 +92,6 @@ AnchorErodeDilateLine<TInputPix, TFunction1, TFunction2>
     {
     ++inLeftP;
     ++outLeftP;
-    if ((inLeftP - m_Size) < 0) 
-      {
-      }
     m_Histo->RemovePixel(inbuffer[inLeftP - m_Size]);
     m_Histo->AddPixel(inbuffer[inLeftP]);
     Extreme = m_Histo->GetValue();

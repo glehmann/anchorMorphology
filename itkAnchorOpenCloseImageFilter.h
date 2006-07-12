@@ -102,15 +102,9 @@ private:
 
   AnchorLineOpenType AnchorLineOpen;
 
-
-  // these declarations are wrong at the moment - just checking that
-  // it compiles
-  // the class that does the erosion
-//  typedef AnchorErodeDilateLine<InputImagePixelType, THistogramCompare, TFunction1, TFunction2> AnchorLineErodeType;
   typedef AnchorErodeDilateLine<InputImagePixelType, LessThan, LessEqual> AnchorLineErodeType;
   
   // the class that does the dilation
-//  typedef AnchorErodeDilateLine<InputImagePixelType, THistogramCompare, TFunction1, TFunction2> AnchorLineDilateType;
   typedef AnchorErodeDilateLine<InputImagePixelType, GreaterThan, GreaterEqual> AnchorLineDilateType;
 
   AnchorLineErodeType AnchorLineErode;
@@ -118,6 +112,7 @@ private:
 
   void doFaceOpen(InputImageConstPointer input,
 		  InputImagePointer output,
+		  typename KernelType::LType line,
 		  const typename BresType::OffsetArray LineOffsets,
 		  InputImagePixelType * outbuffer,	      
 		  const InputImageRegionType AllImage, 
