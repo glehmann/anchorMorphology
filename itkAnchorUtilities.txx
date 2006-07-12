@@ -333,7 +333,7 @@ FaceCalculatorType;
   float MaxComp = NumericTraits<float>::NonpositiveMin();
   unsigned DomDir;
   ++fit;
-  std::cout << "------------" << std::endl;
+//  std::cout << "------------" << std::endl;
   // figure out the dominant direction of the line
   for (unsigned i = 0;i< TInputImage::RegionType::ImageDimension;i++) 
     {
@@ -358,7 +358,7 @@ FaceCalculatorType;
       // now check whether the line goes inside the image from this face
       if ( needToDoFace<typename TInputImage::RegionType, TLine>(AllImage, *fit, line) ) 
 	{
-	std::cout << "Using face: " << *fit << line << std::endl;
+//	std::cout << "Using face: " << *fit << line << std::endl;
 	RelevantRegion = *fit;
 	foundFace = true;
 	break;
@@ -411,9 +411,9 @@ FaceCalculatorType;
     {
     std::cout << "Line " << line << " doesnt correspond to a face" << std::endl;
     }
-  std::cout << "Result region = " << RelevantRegion << std::endl;
+//  std::cout << "Result region = " << RelevantRegion << std::endl;
 
-  std::cout << "+++++++++++++++++" << std::endl;
+//  std::cout << "+++++++++++++++++" << std::endl;
   return RelevantRegion;
 }
 

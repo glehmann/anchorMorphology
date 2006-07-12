@@ -74,9 +74,6 @@ SET(CurrentExe "testDilation")
 ADD_EXECUTABLE(${CurrentExe} ${CurrentExe}.cxx)
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 
-SET(CurrentExe "testLine")
-ADD_EXECUTABLE(${CurrentExe} ${CurrentExe}.cxx)
-TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 
 SET(CurrentExe "testDecomposition2D")
 ADD_EXECUTABLE(${CurrentExe} ${CurrentExe}.cxx)
