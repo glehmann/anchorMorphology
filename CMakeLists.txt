@@ -114,8 +114,10 @@ ADD_TEST(Decomp2DE_8 testDecomposition2D 8 21 31 decomp2DE_8.png)
 ADD_TEST(Decomp2DE_12 testDecomposition2D 12 31 41 decomp2DE_12.png)
 
 ADD_TEST(Decomp3D_6 testDecomposition3D 6 15 15 15 decomp3D_6.tif)
+ADD_TEST(Decomp3D_7 testDecomposition3D 7 15 15 15 decomp3D_7.tif)
 ADD_TEST(Decomp3D_10 testDecomposition3D 10 15 15 15 decomp3D_10.tif)
 ADD_TEST(Decomp3D_16 testDecomposition3D 16 15 15 15 decomp3D_16.tif)
+
 
 #ADD_TEST(Decomp3D_4 testDecomposition3D 4 15 15 15 decomp3D_4.png)
 #ADD_TEST(Decomp3D_6 testDecomposition3D 6 21 21 21 decomp3D_6.png)

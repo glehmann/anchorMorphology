@@ -259,6 +259,43 @@ FlatStructuringElement<VDimension> FlatStructuringElement<VDimension>
 
     }
     break;
+    case 14:
+    {
+    // cube with the corners cut off
+    LType A;
+    // The axes
+    A[0]=1;A[1]=0;A[2]=0;
+    A *= rr;
+    res.m_Lines.push_back(A);
+    A[0]=0;A[1]=1;A[2]=0;
+    A *= rr;
+    res.m_Lines.push_back(A);
+    A[0]=0;A[1]=0;A[2]=1;
+    A *= rr;
+    res.m_Lines.push_back(A);
+    // Diagonals
+    A[0]=1;A[1]=1;A[2]=1;
+    A.Normalize();
+    A *= rr;
+    res.m_Lines.push_back(A);
+
+    A[0]=-1;A[1]=1;A[2]=1;
+    A.Normalize();
+    A *= rr;
+    res.m_Lines.push_back(A);
+
+    A[0]=1;A[1]=-1;A[2]=1;
+    A.Normalize();
+    A *= rr;
+    res.m_Lines.push_back(A);
+
+    A[0]=-1;A[1]=-1;A[2]=1;
+    A.Normalize();
+    A *= rr;
+    res.m_Lines.push_back(A);
+    return(res);
+    }
+    break;
     case 20:
     {
     // Icosahedron
