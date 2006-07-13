@@ -33,7 +33,7 @@ colorlinks,linkcolor={blue},citecolor={blue},urlcolor={blue},
 
 % The title should be descriptive enough for people to be able to find
 % the relevant document. 
-\title{}
+\title{A consolidated morphology architecture, including decomposable and recursive implementations}
 
 % Increment the release number whenever significant changes are made.
 % The author and/or editor can define 'significant' however they like.
@@ -41,8 +41,10 @@ colorlinks,linkcolor={blue},citecolor={blue},urlcolor={blue},
 
 % At minimum, give your name and an email address.  You can include a
 % snail-mail address if you like.
-\author{}
-\authoraddress{}
+\author{Richard Beare{$^1$} {\small{and}} Ga\"etan Lehmann{$^2$}}
+\authoraddress{{$^1$}Department of Medicine, Monash University, Australia.\\
+{$^2$}Unit\'e de Biologie du D\'eveloppement et de la Reproduction, Institut National de la Recherche Agronomique, 78350 Jouy-en-Josas, France}
+
 
 \begin{document}
 \maketitle
@@ -54,45 +56,118 @@ colorlinks,linkcolor={blue},citecolor={blue},urlcolor={blue},
 
 \begin{abstract}
 \noindent
-% The abstract should be a paragraph or two long, and describe the
-% scope of the document.
+The mathematical morphology operations of erosion, dilation, opening
+and closing are members of an important family of non-linear which
+compute rank statistics of a kernel. This paper introduces a number of
+well known techniques that can be used to dramatically improve the
+execution times and describes a new, consolidated class structure via
+which the various approaches can be accessed.
 \end{abstract}
 
 \tableofcontents
 
 
-% \url{http://www.itk.org}
-% \code{Insight/Documentation/Style.pdf}
-% \section{Principles of Solar Spot Detection}
-% \cite{ITKSoftwareGuide}.
-% \doxygen{ImageToImageFilter}
+\section{Introduction}
+An erosion operation may be loosely defined as replacing the origin of
+a kernel by the minimum value in the region defined by the kernel. The
+ITK erosion filter, {\em GrayscaleErodeImageFilter}, performs this
+operation directly using a neighborhood iterator. While this is quite
+a neat example of the use of neighborhood iterators and boundary
+conditions, it the worst possible way of implementing an erosion,
+resulting in a complexity proportional to the number of pixels in the
+kernel. This complexity is especially significant when dealing with
+large structuring elements and tends to limit the applicability of
+these otherwise very useful filters.
 
-% \small \begin{verbatim}
-% \end{verbatim} \normalsize
+This paper will describe two classes of technique that dramatically
+improve the performance of these operations. One technique is
+applicable to arbitrary shaped structuring elements and reduces the
+complexity from $O(n^d)$ to $O(n^{d-1})$, where $n$ is the kernel size
+and $d$ is the kernel dimension. The other is applicable to only
+certain shapes of structuring element and produce a complexity that is
+{\bf independent} of kernel size.
 
+\section{Flat vs non-flat structuring elements}
+Morphological operations may involve flat or non-flat structuring
+elements. Non-flat structuring elements are less commonly used than
+flat, and are analogous to a weighted kernel. This discussion will
+focus on flat structuring elements, although technique described in
+Section \ref{sect:movingHist} is applicable to non-flat structuring
+elements.
 
-% The {itemize} environment uses a bullet for each \item.  If you want the 
-% \item's numbered, use the {enumerate} environment instead.
-% \begin{itemize}
-%   \item  Insight Toolkit 2.4.
-%   \item  CMake 2.2
-% \end{itemize}
+\section{General background}
+There are, broadly speaking, two approaches to speeding up kernel
+based filters. The first is to exploit properties such as
+separability, which may allow an n-dimensional filter to be
+implemented as several one dimensional filters. When this sort of
+decomposition is possible complexity is typically reduced from
+$O(n^d)$ to $O(nd)$. The second approach is to exploit redundancy in
+the computation to produce a recursive implementation of the filter,
+meaning that the result for a pixel becomes dependent on the result
+for neighboring pixel. In the best case scenario the complexity may
+become independent of kernel size.
 
-% \ref{cthead1}
+The gaussian convolution filters in ITK exploit both approaches.
 
-\begin{figure}[htbp]
-\centering
-\includegraphics{cthead1}
-\caption{The input image.\label{cthead1}}
-\end{figure}
+\section{Arbitary structuring elements}
+\label{sect:movingHist} 
+The technique used to implement morhpological operations by arbitary
+structuring is based on a updatable histogram and was described in
+\cite{Vandroogenbroeck96.3}. The basic concept is very simple. 
+A histogram is computed for the kernel centred on the first pixel of
+the image. The maximum or minimum pixel value can easily be computed
+using the histogram. The histogram for the neighboring pixel can be
+computed by discarding outgoing pixels and adding incoming
+pixels. Outgoing and incoming pixels for a particular kernel can be
+automatically computed when the kernel is created.
 
+This is an example of a recursive implementation.
+
+\subsection{Differences between this implementation and original paper}
+The original paper restricted the pixel type to 8 bit so that a 256
+element histogram could be used. This implementation uses a C++ map
+for larger pixel types and a fixed size type for 8 and 16 bit pixels.
+
+The original paper also advocated sliding the kernel in a zigzag
+pattern through the image. Our experiments showed that sliding the
+kernel in raster order, which required saving the histogram between
+lines, offered a performance advantage (approximately 15\%) for large
+images. This is presumably related to cache activity.
+
+\section{Decomposable structuring elements}
+A variety of useful structuring element shapes can be composed from
+line segments. The classical example is a rectangle - an erosion by a
+$n \times m$ rectangle can be produced by carrying out an erosion by a
+horizontal line of length $n$ followed by an erosion by a vertical
+line of length $m$. Circles, or at least useful approximations of
+circles, can be produced using a radial decomposition
+\cite{Adams93}. Useful approximations of spheres, based on platonic
+solids and other shapes, can also be constructed this way.
+
+The ability to decompose structuring elements into line operations is
+especially significant because there are a number of very fast,
+recursive, algorithms for erosions and dilations that have complexity
+that is independent of line length. The most famous of these are
+probably \cite{vanHerk1992a,Gil1993}, which require approximately 3
+operations per pixel. A more recent advance, using {\em anchors}
+\cite{Vandroogenbroeck2005Morphological} reduces this 
+further\footnote{This discussion is very brief. More details of
+existing algorithms are available in
+\cite{Vandroogenbroeck2005Morphological}}.
+
+The implementation of anchor based morphology extends the algorithm
+described in \cite{Vandroogenbroeck2005Morphological} to support
+arbitary pixel types. Lines at arbitary angles are also supported
+using the techniques described in \cite{soille-breen-jones96}.
+
+\section{The new class heirarchy}
 
 \appendix
 
 
 
 \bibliographystyle{plain}
-\bibliography{InsightJournal}
+\bibliography{InsightJournal,local}
 \nocite{ITKSoftwareGuide}
 
 \end{document}
