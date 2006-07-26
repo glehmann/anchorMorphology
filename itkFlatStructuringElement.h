@@ -35,29 +35,30 @@ public:
   virtual ~FlatStructuringElement() {}
 
   /** Default consructor. */
-  FlatStructuringElement() {m_Decomposition=false;}
+  FlatStructuringElement() {m_Decomposable=false;}
 
   /** Various constructors */
 
-  static FlatStructuringElement Box(RadiusType radius);
+  static Self Box(RadiusType radius);
   
   // lines is the number of elements in the decomposition
-  static FlatStructuringElement Poly(RadiusType radius, unsigned lines);
+  static Self Poly(RadiusType radius, unsigned lines);
 
-  bool Decomposable()
+  bool GetDecomposable()
   {
-    return m_Decomposition;
+    return m_Decomposable;
   }
 
-  void PrintSelf(std::ostream &os, Indent indent) const;
-
-  const DecompType &GetDecomp()
+  const DecompType & GetLines()
   {
     return(m_Lines);
   }
 
+  void PrintSelf(std::ostream &os, Indent indent) const;
+
+
 private:
-  bool m_Decomposition;
+  bool m_Decomposable;
 
   DecompType m_Lines;
   

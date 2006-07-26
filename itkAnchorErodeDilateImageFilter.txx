@@ -24,7 +24,7 @@ AnchorErodeDilateImageFilter<TImage, TKernel, TFunction1, TFunction2>
 {
 
   // check that we are using a decomposable kernel
-  if (!m_Kernel.Decomposable())
+  if (!m_Kernel.GetDecomposable())
     {
     itkWarningMacro("Anchor morphology only works with decomposable structuring elements");
     return;
@@ -63,7 +63,7 @@ AnchorErodeDilateImageFilter<TImage, TKernel, TFunction1, TFunction2>
   InputImagePixelType * inbuffer = new InputImagePixelType[bufflength];
 
   // iterate over all the structuring elements
-  typename KernelType::DecompType decomposition = m_Kernel.GetDecomp();
+  typename KernelType::DecompType decomposition = m_Kernel.GetLines();
   BresType BresLine;
   ProgressReporter progress(this, 0, decomposition.size());
 

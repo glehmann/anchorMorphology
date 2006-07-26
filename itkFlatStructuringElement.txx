@@ -55,7 +55,7 @@ FlatStructuringElement<VDimension> FlatStructuringElement<VDimension>
   // and Spheres" - CVGIP: Graphical Models and Image Processing
   //std::cout << "2 dimensions" << std::endl;
   FlatStructuringElement res = FlatStructuringElement();
-  res.m_Decomposition = true;
+  res.m_Decomposable = true;
   
   unsigned int rr = 0;
   for (unsigned i=0;i<VDimension;i++)
@@ -114,7 +114,7 @@ FlatStructuringElement<VDimension> FlatStructuringElement<VDimension>
 ::PolySub(const Dispatch<3> &, RadiusType radius, unsigned lines) const
 {
   FlatStructuringElement res = FlatStructuringElement();
-  res.m_Decomposition = true;
+  res.m_Decomposable = true;
   std::cout << "3 dimensions" << std::endl;
   unsigned int rr = 0;
   int iterations = 1;
@@ -610,7 +610,7 @@ FlatStructuringElement<VDimension> FlatStructuringElement<VDimension>
 {
   // this should work for any number of dimensions
   FlatStructuringElement res = FlatStructuringElement();
-  res.m_Decomposition = true;
+  res.m_Decomposable = true;
   for (unsigned i = 0;i<VDimension;i++)
     {
     if (radius[i] != 0)
@@ -647,7 +647,7 @@ void FlatStructuringElement< VDimension >
 ::PrintSelf(std::ostream &os, Indent indent) const
 {
   //Superclass::PrintSelf(os, indent);
-  if (m_Decomposition)
+  if (m_Decomposable)
     {
     os << indent << "SE decomposition:" << std::endl;
     for (unsigned i = 0;i < m_Lines.size(); i++)
