@@ -627,7 +627,7 @@ FlatStructuringElement<VDimension> FlatStructuringElement<VDimension>
       {
       LType L;
       L.Fill(0);
-      L[i] = radius[i];
+      L[i] = radius[i]*2+1;
       res.m_Lines.push_back(L);
       }
     }
