@@ -78,7 +78,7 @@ AnchorErodeDilateImageFilter<TImage, TKernel, TFunction1, TFunction2>
     if (!(SELength%2))
       ++SELength;
 
-    std::cout << ThisLine << SELength << std::endl;
+    std::cout << "line: " << ThisLine << " " << SELength << std::endl;
     AnchorLine.SetSize(SELength);
 
     InputImageRegionType BigFace = mkEnlargedFace<InputImageType, typename KernelType::LType>(input, OReg, ThisLine);
@@ -88,6 +88,7 @@ AnchorErodeDilateImageFilter<TImage, TKernel, TFunction1, TFunction2>
     // after the first pass the input will be taken from the output
     input = this->GetOutput();
     progress.CompletedPixel();
+    std::cout << std::endl;
     }
 
 

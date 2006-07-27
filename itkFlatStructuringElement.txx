@@ -124,7 +124,7 @@ FlatStructuringElement<VDimension> FlatStructuringElement<VDimension>
 {
   FlatStructuringElement res = FlatStructuringElement();
   res.m_Decomposable = true;
-  std::cout << "3 dimensions" << std::endl;
+  // std::cout << "3 dimensions" << std::endl;
   unsigned int rr = 0;
   int iterations = 1;
   int faces = lines * 2;
@@ -511,7 +511,7 @@ FlatStructuringElement<VDimension> FlatStructuringElement<VDimension>
     // total number of facets is 8 * (4^iterations)
     int facets = 8 * (int)pow(4, iterations);
     float sqrt2 = sqrt(2.0);
-    std::cout << facets << " facets" << std::endl;
+    // std::cout << facets << " facets" << std::endl;
     typedef std::vector<FacetType> FacetArrayType;
     FacetArrayType FacetArray = FacetArrayType(facets);
     
@@ -664,7 +664,7 @@ FlatStructuringElement<VDimension> FlatStructuringElement<VDimension>
 
   sourceImage->SetRegions( region );
   sourceImage->Allocate();
-  sourceImage->Print( std::cout );
+  // sourceImage->Print( std::cout );
 
   // Set the background to be zero
   //
@@ -732,9 +732,8 @@ FlatStructuringElement<VDimension> FlatStructuringElement<VDimension>
   for (it.GoToBegin(), kernel_it=res.Begin();!it.IsAtEnd();++it,++kernel_it)
     {
     *kernel_it = it.Get();
-std::cout << *kernel_it << " ";
     }
-std::cout << std::endl;
+
   // Clean up
   //   ...temporary image should be cleaned up by SmartPointers automatically
 
@@ -805,8 +804,7 @@ ComputeBufferFromLines()
   region.SetSize( size );
   sourceImage->SetRegions( region );
   sourceImage->Allocate();
-
-sourceImage->Print(std::cout);
+  // sourceImage->Print(std::cout);
 
   // Set the background to be zero
   //
@@ -862,7 +860,7 @@ GetImage()
   image->SetRegions( region );
   image->Allocate();
 
-  std::cout << this->GetRadius() << std::endl;
+  // std::cout << this->GetRadius() << std::endl;
   // image->Print( std::cout );
 
   ImageRegionIterator<ImageType> oit( image, region );
