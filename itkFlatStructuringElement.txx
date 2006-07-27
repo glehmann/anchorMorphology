@@ -10,6 +10,13 @@
 #define M_PI 3.14159265358979323846
 #endif
 
+#include "itkImage.h"
+#include "itkImageRegionIterator.h"
+#include "itkFloodFilledSpatialFunctionConditionalIterator.h"
+#include "itkEllipsoidInteriorExteriorSpatialFunction.h" 
+
+#include "itkAnchorDilateImageFilter.h"
+
 
 namespace itk
 {
@@ -19,6 +26,7 @@ FlatStructuringElement<VDimension> FlatStructuringElement<VDimension>
 {
     FlatStructuringElement res = FlatStructuringElement();
     res = res.PolySub(Dispatch<VDimension>(), radius, lines);
+    res.SetRadius( radius );
 #if 0
     float theta, phi, step;
     theta = phi = 0;
@@ -43,6 +51,7 @@ FlatStructuringElement<VDimension> FlatStructuringElement<VDimension>
       }
     std::cout << "---------------" << std::endl;
 #endif
+    res.ComputeBufferFromLines();
     return(res);
 
 }
@@ -611,6 +620,7 @@ FlatStructuringElement<VDimension> FlatStructuringElement<VDimension>
   // this should work for any number of dimensions
   FlatStructuringElement res = FlatStructuringElement();
   res.m_Decomposable = true;
+  res.SetRadius( radius );
   for (unsigned i = 0;i<VDimension;i++)
     {
     if (radius[i] != 0)
@@ -621,7 +631,114 @@ FlatStructuringElement<VDimension> FlatStructuringElement<VDimension>
       res.m_Lines.push_back(L);
       }
     }
+  res.ComputeBufferFromLines();
   return(res);
+}
+
+
+
+template<unsigned int VDimension>
+FlatStructuringElement<VDimension> FlatStructuringElement<VDimension>
+::Ball(RadiusType radius)
+{
+  FlatStructuringElement res = FlatStructuringElement();
+  res.SetRadius( radius );
+  res.m_Decomposable = false;
+
+  unsigned int i;
+  
+  // Image typedef
+  typedef Image<bool, VDimension> ImageType;
+
+  // Create an image to hold the ellipsoid
+  //
+  typename ImageType::Pointer sourceImage = ImageType::New();
+  typename ImageType::RegionType region;
+  RadiusType size = radius;
+  for( int i=0; i<VDimension; i++ )
+    {
+    size[i] *= 2;
+    size[i] += 1;
+    }
+  region.SetSize( size );
+
+  sourceImage->SetRegions( region );
+  sourceImage->Allocate();
+  sourceImage->Print( std::cout );
+
+  // Set the background to be zero
+  //
+  ImageRegionIterator<ImageType> it(sourceImage, region);
+
+  for(it.GoToBegin(); !it.IsAtEnd(); ++it)
+    {
+    it.Set(false);
+    }
+
+  
+  // Create the ellipsoid
+  //
+
+  // Ellipsoid spatial function typedef
+  typedef EllipsoidInteriorExteriorSpatialFunction<VDimension> EllipsoidType;
+  
+  // Create an ellipsoid spatial function for the source image
+  typename EllipsoidType::Pointer spatialFunction = EllipsoidType::New();
+
+  // Define and set the axes lengths for the ellipsoid
+  typename EllipsoidType::InputType axes;
+  for (i=0; i < VDimension; i++)
+    {
+    axes[i] = res.GetSize(i);
+    }
+  spatialFunction->SetAxes( axes );
+
+  // Define and set the center of the ellipsoid in physical space
+  typename EllipsoidType::InputType center;
+  for (i=0; i < VDimension; i++)
+    {
+    // put the center of ellipse in the middle of the center pixel
+    center[i] = res.GetRadius(i) + 0.5; 
+    }
+  spatialFunction->SetCenter( center );
+
+  // Define the orientations of the ellipsoid axes, for now, we'll use
+  // the identify matrix
+  typename EllipsoidType::OrientationType orientations;
+  orientations.fill( 0.0 );
+  orientations.fill_diagonal( 1.0 );
+  spatialFunction->SetOrientations(orientations);
+
+  typename ImageType::IndexType seed;
+  for (i=0; i < VDimension; i++)
+    {
+    seed[i] = res.GetRadius(i);
+    }
+  FloodFilledSpatialFunctionConditionalIterator<ImageType, EllipsoidType> 
+    sfi = FloodFilledSpatialFunctionConditionalIterator<ImageType,
+    EllipsoidType>(sourceImage, spatialFunction, seed);
+  sfi.SetCenterInclusionStrategy();
+  
+  // Iterate through the entire image and set interior pixels to 1
+  for(; !sfi.IsAtEnd(); ++sfi)
+    {
+    sfi.Set(true);
+    }
+
+  
+  // Copy the ellipsoid into the kernel
+  //
+  Iterator kernel_it;
+  for (it.GoToBegin(), kernel_it=res.Begin();!it.IsAtEnd();++it,++kernel_it)
+    {
+    *kernel_it = it.Get();
+std::cout << *kernel_it << " ";
+    }
+std::cout << std::endl;
+  // Clean up
+  //   ...temporary image should be cleaned up by SmartPointers automatically
+
+  return res;
 }
 
 
@@ -656,6 +773,117 @@ void FlatStructuringElement< VDimension >
       }
     }
 }
+
+
+template<unsigned int VDimension>
+void
+FlatStructuringElement<VDimension>::
+ComputeBufferFromLines()
+{
+  if( m_Decomposable )
+    {
+/*    itkExceptionMacro("Element must be decomposable.");*/
+    }
+
+  // create an image with a single pixel in the center which will be dilated
+  // by the structuring lines (with AnchorDilateImageFilter) so the content
+  // of the buffer will reflect the shape of the structuring element
+
+  // Image typedef
+  typedef Image<bool, VDimension> ImageType;
+
+  // Create an image to hold the ellipsoid
+  //
+  typename ImageType::Pointer sourceImage = ImageType::New();
+  typename ImageType::RegionType region;
+  RadiusType size = this->GetRadius();
+  for( int i=0; i<VDimension; i++ )
+    {
+    size[i] *= 2;
+    size[i] += 1;
+    }
+  region.SetSize( size );
+  sourceImage->SetRegions( region );
+  sourceImage->Allocate();
+
+sourceImage->Print(std::cout);
+
+  // Set the background to be zero
+  //
+  ImageRegionIterator<ImageType> it( sourceImage, region );
+
+  for( it.GoToBegin(); !it.IsAtEnd(); ++it )
+    {
+    it.Set( false );
+    }
+
+  // set the center pixel to 1
+  typename ImageType::IndexType center;
+  for( int i=0; i<VDimension; i++)
+    {
+    center[i] = this->GetRadius()[i];
+    }
+  sourceImage->SetPixel( center, true );
+
+  // dilate the pixel
+  typedef itk::AnchorDilateImageFilter<ImageType, Self> DilateType;
+  typename DilateType::Pointer dilate = DilateType::New();
+  dilate->SetInput( sourceImage );
+  dilate->SetKernel( *this );
+  dilate->Update();
+
+  // copy back the image to the kernel
+  ImageRegionIterator<ImageType> oit( dilate->GetOutput(), region );
+  Iterator kernel_it;
+  for( oit.GoToBegin(), kernel_it=this->Begin(); !oit.IsAtEnd(); ++oit,++kernel_it )
+    {
+    *kernel_it = oit.Get();
+    }
+
+}
+
+
+
+template<unsigned int VDimension>
+template< class ImageType >
+typename ImageType::Pointer
+FlatStructuringElement<VDimension>::
+GetImage()
+{
+  typename ImageType::Pointer image = ImageType::New();
+  typename ImageType::RegionType region;
+  RadiusType size = this->GetRadius();
+  for( int i=0; i<VDimension; i++ )
+    {
+    size[i] *= 2;
+    size[i] += 1;
+    }
+  region.SetSize( size );
+  image->SetRegions( region );
+  image->Allocate();
+
+  std::cout << this->GetRadius() << std::endl;
+  // image->Print( std::cout );
+
+  ImageRegionIterator<ImageType> oit( image, region );
+  Iterator kernel_it;
+  for( oit.GoToBegin(), kernel_it=this->Begin(); !oit.IsAtEnd(); ++oit,++kernel_it )
+    {
+    if( *kernel_it )
+      {
+      oit.Set( itk::NumericTraits< typename ImageType::PixelType >::max() );
+      }
+    else
+      {
+      oit.Set( itk::NumericTraits< typename ImageType::PixelType >::Zero );
+      }
+    }
+
+  return image;
+
+}
+
+
 
 }
 
