@@ -35,24 +35,25 @@ AnchorErodeDilateLine<TInputPix, TFunction1, TFunction2>
   // closing, and then copy the result to the output. Hopefully this
   // will improve cache performance when working along non raster
   // directions.
-  if (bufflength <= m_Size)
-    {
-    // No point doing anything fancy - just look for the extreme value
-    // This is important when operating near the corner of images with
-    // angled structuring elements 
-    InputImagePixelType Extreme = inbuffer[0];
-    for (unsigned i = 0;i < bufflength;i++) 
-      {
-      if (m_TF1(Extreme, inbuffer[i]))
-	Extreme = inbuffer[i];
-      }
 
-    for (unsigned i = 0;i < bufflength;i++) 
-      {
-      buffer[i] = Extreme;
-      }
-    return;
-    }
+//   if (bufflength <= m_Size)
+//     {
+//     // No point doing anything fancy - just look for the extreme value
+//     // This is important when operating near the corner of images with
+//     // angled structuring elements 
+//     InputImagePixelType Extreme = inbuffer[0];
+//     for (unsigned i = 0;i < bufflength;i++) 
+//       {
+//       if (m_TF1(Extreme, inbuffer[i]))
+// 	Extreme = inbuffer[i];
+//       }
+// 
+//     for (unsigned i = 0;i < bufflength;i++) 
+//       {
+//       buffer[i] = Extreme;
+//       }
+//     return;
+//     }
 
   unsigned int middle = m_Size/2;
 
