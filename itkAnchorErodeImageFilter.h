@@ -14,6 +14,10 @@ public:
   typedef AnchorErodeImageFilter Self;
   typedef AnchorErodeDilateImageFilter<TImage, TKernel, std::less<typename TImage::PixelType>, std::less_equal<typename TImage::PixelType> > Superclass;
 
+  /** Runtime information support. */
+  itkTypeMacro(AnchorErodeImageFilter, 
+               AnchorErodeDilateImageFilter);
+
   typedef SmartPointer<Self>   Pointer;
   typedef SmartPointer<const Self>  ConstPointer;
 
