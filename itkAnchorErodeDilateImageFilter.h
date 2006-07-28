@@ -6,6 +6,8 @@
 #include "itkAnchorErodeDilateLine.h"
 #include "itkBresenhamLine.h"
 
+#define ANCHOR_ALGORITHM
+
 namespace itk {
 
 /** 
@@ -79,18 +81,11 @@ private:
   bool m_KernelSet;
   typedef BresenhamLine<TImage::ImageDimension> BresType;
 
+#ifdef ANCHOR_ALGORITHM
   // the class that operates on lines
   typedef AnchorErodeDilateLine<InputImagePixelType, TFunction1, TFunction2> AnchorLineType;
 
   AnchorLineType AnchorLine;
-#if 0
-  void doFace(typename TImage::ConstPointer input,
-	      typename TImage::Pointer output,
-	      const typename BresType::OffsetArray LineOffsets,
-	      InputImagePixelType * inbuffer,
-	      InputImagePixelType * outbuffer,	      
-	      const OutputImageRegionType AllImage, 
-	      const OutputImageRegionType face);
 #endif
 
 } ; // end of class

@@ -3,6 +3,8 @@
 
 #include <list>
 
+#define ANCHOR_ALGORITHM
+
 namespace itk {
 
 /**
@@ -17,6 +19,7 @@ bool needToDoFace(const TRegion AllImage,
 		  const TRegion face,
 		  const TLine line);
 
+#ifdef ANCHOR_ALGORITHM
 template <class TImage, class TBres, class TLine>
 int fillLineBuffer(typename TImage::ConstPointer input,
 		   const typename TImage::IndexType StartIndex,
@@ -27,7 +30,20 @@ int fillLineBuffer(typename TImage::ConstPointer input,
 		   typename TImage::PixelType * inbuffer,
 		   unsigned &start,
 		   unsigned &end);
-
+#else
+template <class TImage, class TBres, class TLine, class TFunction>
+int fillLineBuffer(typename TImage::ConstPointer input,
+		   const typename TImage::IndexType StartIndex,
+		   const TLine line,  // unit vector
+		   const float tol,
+		   const typename TBres::OffsetArray LineOffsets,
+		   const typename TImage::RegionType AllImage,
+		   const unsigned int KernLen,
+		   typename TImage::PixelType * pixbuffer,
+		   typename TImage::PixelType * fExtBuffer,
+		   unsigned &start,
+		   unsigned &end);
+#endif
 template <class TImage, class TBres, class TLine>
 int computeStartEnd(const typename TImage::IndexType StartIndex,
 		    const TLine line,
@@ -54,16 +70,31 @@ void copyLineToImage(const typename TImage::Pointer output,
 		     const unsigned start,
 		     const unsigned end);
 
+#ifdef ANCHOR_ALGORITHM
 template <class TImage, class TBres, class TAnchor, class TLine>
 void doFace(typename TImage::ConstPointer input,
 	    typename TImage::Pointer output,
+	    TLine line,
 	    TAnchor &AnchorLine,
 	    const typename TBres::OffsetArray LineOffsets,
 	    typename TImage::PixelType * inbuffer,
 	    typename TImage::PixelType * outbuffer,	      
 	    const typename TImage::RegionType AllImage, 
 	    const typename TImage::RegionType face);
+#else
+template <class TImage, class TBres, class TFunction, class TLine>
+void doFace(typename TImage::ConstPointer input,
+	    typename TImage::Pointer output,
+	    TLine line,
+	    const typename TBres::OffsetArray LineOffsets,
+	    const unsigned int KernLen,
+	    typename TImage::PixelType * pixbuffer,
+	    typename TImage::PixelType * fExtBuffer,	      
+	    typename TImage::PixelType * rExtBuffer,	      
+	    const typename TImage::RegionType AllImage, 
+	    const typename TImage::RegionType face);
 
+#endif
 // This creates a list of non overlapping faces that need to be
 // processed for this particular line orientation. We are doing this
 // instead of using the Face Calculator to avoid repeated operations

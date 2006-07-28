@@ -201,6 +201,8 @@ int computeStartEnd(const typename TImage::IndexType StartIndex,
   return (1);
 }
 
+#ifdef ANCHOR_ALGORITHM
+
 template <class TImage, class TBres, class TLine>
 int fillLineBuffer(typename TImage::ConstPointer input,
 		   const typename TImage::IndexType StartIndex,
@@ -252,6 +254,86 @@ int fillLineBuffer(typename TImage::ConstPointer input,
   return(1);
 }
 
+#else
+
+template <class TImage, class TBres, class TLine, class TFunction>
+int fillLineBuffer(typename TImage::ConstPointer input,
+		   const typename TImage::IndexType StartIndex,
+		   const TLine line,  // unit vector
+		   const float tol,
+		   const typename TBres::OffsetArray LineOffsets,
+		   const typename TImage::RegionType AllImage,
+		   const unsigned int KernLen,
+		   typename TImage::PixelType * pixbuffer,
+		   typename TImage::PixelType * fExtBuffer,
+		   unsigned &start,
+		   unsigned &end)
+{
+
+ int status = computeStartEnd<TImage, TBres, TLine>(StartIndex, line, tol, LineOffsets, AllImage,
+						     start, end);
+  if (!status) return(status);
+
+  unsigned size = end - start + 1;
+  unsigned blocks = size/KernLen;
+  unsigned i = 0;
+  TFunction m_TF;
+//  std::cout << "Line length = " << size << " KernSize = " << KernLen << " Blocks = " << blocks << std::endl;
+  for (unsigned j = 0; j<blocks;j++)
+    {
+//    std::cout << "f1: i = " << i << std::endl;
+    typename TImage::PixelType Ext = input->GetPixel(StartIndex + LineOffsets[start + i]);
+    pixbuffer[i] = Ext;
+    fExtBuffer[i]=Ext;
+    ++i;
+    for (unsigned k = 1; k < KernLen; k++)
+      {
+//      std::cout << "f2: i = " << i << std::endl;
+      typename TImage::PixelType V = input->GetPixel(StartIndex + LineOffsets[start + i]);
+      pixbuffer[i] = V;
+      if (m_TF(V, fExtBuffer[i-1]))
+	{
+	fExtBuffer[i] = V;
+	}
+      else
+	{
+	fExtBuffer[i] = fExtBuffer[i-1];
+	}
+      ++i;
+      }
+    }
+  // finish the rest
+  if (i != size - 1)
+    {
+    typename TImage::PixelType V = input->GetPixel(StartIndex + LineOffsets[start + i]);
+    pixbuffer[i] = V;
+    fExtBuffer[i] = V;
+    i++;
+    }
+  while (i < size)
+    {
+    typename TImage::PixelType V = input->GetPixel(StartIndex + LineOffsets[start + i]);
+    pixbuffer[i] = V;
+    if (m_TF(V, fExtBuffer[i-1]))
+      {
+      fExtBuffer[i] = V;
+      }
+    else
+      {
+      fExtBuffer[i] = fExtBuffer[i-1];
+      }
+    ++i;
+    }
+//   for (unsigned h = 0; h < size; h++)
+//     {
+//     std::cout << (int)pixbuffer[h] << " " << (int)fExtBuffer[h] << std::endl;
+//     }
+  return(1);
+}
+
+
+#endif
+
 template <class TImage, class TBres>
 void copyLineToImage(const typename TImage::Pointer output,
 		     const typename TImage::IndexType StartIndex,
@@ -271,6 +353,8 @@ void copyLineToImage(const typename TImage::Pointer output,
     }
 //  std::cout << "Copy out " << StartIndex << StartIndex + LineOffsets[len-1] << std::endl;
 }
+
+#ifdef ANCHOR_ALGORITHM
 
 template <class TImage, class TBres, class TAnchor, class TLine>
 void doFace(typename TImage::ConstPointer input,
@@ -312,6 +396,156 @@ void doFace(typename TImage::ConstPointer input,
 
 }
 
+#else
+template <class TImage, class TBres, class TFunction, class TLine>
+void doFace(typename TImage::ConstPointer input,
+	    typename TImage::Pointer output,
+	    TLine line,
+	    const typename TBres::OffsetArray LineOffsets,
+	    const unsigned int KernLen,
+	    typename TImage::PixelType * pixbuffer,
+	    typename TImage::PixelType * fExtBuffer,	      
+	    typename TImage::PixelType * rExtBuffer,	      
+	    const typename TImage::RegionType AllImage, 
+	    const typename TImage::RegionType face)
+{
+  // iterate over the face
+  typedef ImageRegionConstIteratorWithIndex<TImage> ItType;
+  ItType it(input, face);
+  it.GoToBegin();
+  TLine NormLine = line;
+  NormLine.Normalize();
+  // set a generous tolerance
+  float tol = 1.0/LineOffsets.size();
+
+  while (!it.IsAtEnd()) 
+    {
+    typename TImage::IndexType Ind = it.GetIndex();
+    unsigned start, end, len;
+    if (fillLineBuffer<TImage, TBres, TLine, TFunction>(input, Ind, NormLine, tol, LineOffsets, 
+							AllImage, KernLen, pixbuffer, fExtBuffer, 
+							start, end))
+      {
+      len = end - start + 1;
+      // compute the reverse running extreme -- not that we aren't
+      // using unsigned types because it is messy using them in
+      // reverse loops
+      int size = (int)(end - start + 1);
+      int blocks = size/(int)KernLen;
+      int i = size - 1;
+      TFunction m_TF;
+
+      if ((i > (blocks * (int)KernLen - 1)))
+	{
+	rExtBuffer[i] = pixbuffer[i];
+//	std::cout << "r1: i = " << i << " " << (int) rExtBuffer[i] << std::endl;
+	--i;
+	while (i >= (int)(blocks * KernLen))
+	  {
+//	  std::cout << "r2: i = " << i << std::endl;
+	  
+	  typename TImage::PixelType V = pixbuffer[i];
+	  if (m_TF(V, rExtBuffer[i+1]))
+	    {
+	    rExtBuffer[i] = V;
+	    }
+	  else
+	    {
+	    rExtBuffer[i] = rExtBuffer[i+1];
+	    }
+//	  std::cout << "r2: i = " << i << " " << (int) rExtBuffer[i] << std::endl;
+	  --i;
+	  }	
+	}
+      for (unsigned j = 0; j<blocks;j++)
+	{
+//	std::cout << "r3: i = " << i << std::endl;
+	typename TImage::PixelType Ext = pixbuffer[i];
+	rExtBuffer[i]=Ext;
+	--i;
+	for (unsigned k = 1; k < KernLen; k++)
+	  {
+//	  std::cout << "r4: i = " << i << std::endl;
+	  typename TImage::PixelType V = pixbuffer[i];
+	  if (m_TF(V, rExtBuffer[i+1]))
+	    {
+	    rExtBuffer[i] = V;
+	    }
+	  else
+	    {
+	    rExtBuffer[i] = rExtBuffer[i+1];
+	    }
+	  --i;
+	  }
+	}
+      // now compute result
+      if (size <= KernLen/2)
+	{
+	for (unsigned j = 0;j < size;j++)
+	  {
+	  pixbuffer[j] = fExtBuffer[size-1];
+	  }
+	}
+      else if (size <= KernLen)
+	{
+	for (unsigned j = 0;j < size - KernLen/2;j++)
+	  {
+	  pixbuffer[j] = fExtBuffer[j + KernLen/2];
+	  }
+	for (unsigned j =  size - KernLen/2; j <= KernLen/2; j++)
+	  {
+	  pixbuffer[j] = fExtBuffer[size-1];
+	  }
+	for (unsigned j =  KernLen/2 + 1; j < size; j++)
+	  {
+	  pixbuffer[j] = rExtBuffer[j - KernLen/2];
+	  }
+	}
+      else
+	{
+	// line beginning
+	for (unsigned j = 0;j < KernLen/2;j++)
+	  {
+	  pixbuffer[j] = fExtBuffer[j + KernLen/2];
+	  }
+	for (unsigned j = KernLen/2, k=KernLen/2 + KernLen/2, l = KernLen/2 - KernLen/2;
+	     j < size - KernLen/2; j++, k++, l++)
+	  {
+	  typename TImage::PixelType V1 = fExtBuffer[k];
+	  typename TImage::PixelType V2 = rExtBuffer[l];
+	  if (m_TF(V1, V2))
+	    {
+	    pixbuffer[j] = V1;
+	    }
+	  else
+	    {
+	    pixbuffer[j] = V2;
+	    }
+	  }
+	// line end -- involves reseting the end of the reverse
+	// extreme array
+	for (unsigned j = size - 2; (j > 0) && (j >= (size - KernLen - 1)); j--)
+	  {
+//	  std::cout << "j1 = " << j << " ";
+	  if (m_TF(rExtBuffer[j+1], rExtBuffer[j]))
+	    {
+	    rExtBuffer[j] = rExtBuffer[j+1];
+	    }
+//	    std::cout << (int) rExtBuffer[j] << " ";
+	  }
+//	std::cout << std::endl;
+	for (unsigned j = size - KernLen/2; j < size;j++)
+	  {
+//	  std::cout << "j2 = " << j - KernLen/2 << std::endl;
+	  pixbuffer[j]=rExtBuffer[j-KernLen/2];
+	  }
+	}
+      copyLineToImage<TImage, TBres>(output, Ind, LineOffsets, pixbuffer, start, end);
+      }
+    ++it;
+    }
+}
+#endif
 template <class TInputImage, class TLine>
 typename TInputImage::RegionType
 mkEnlargedFace(const typename TInputImage::ConstPointer input,
