@@ -26,13 +26,11 @@ AnchorErodeDilateImageFilter<TImage, TKernel, TFunction1, TFunction2>
   // check that we are using a decomposable kernel
   if (!m_Kernel.GetDecomposable())
     {
-    itkWarningMacro("Anchor morphology only works with decomposable structuring elements");
-    return;
+    itkExceptionMacro("Anchor morphology only works with decomposable structuring elements");
     }
   if (!m_KernelSet)
     {
-    itkWarningMacro("No kernel set - quitting");
-    return;
+    itkExceptionMacro("No kernel set");
     }
   // TFunction1 will be < for erosions
   // TFunction2 will be <=
