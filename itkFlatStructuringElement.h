@@ -62,12 +62,12 @@ public:
   // lines is the number of elements in the decomposition
   static Self Poly(RadiusType radius, unsigned lines);
 
-  bool GetDecomposable()
+  bool GetDecomposable() const
   {
     return m_Decomposable;
   }
 
-  const DecompType & GetLines()
+  const DecompType & GetLines() const
   {
     return(m_Lines);
   }
