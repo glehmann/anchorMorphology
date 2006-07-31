@@ -51,21 +51,21 @@ private:
 		 InputImagePixelType * inbuffer,
 		 InputImagePixelType &Extreme,
 		 Histogram &histo,
-		 unsigned &outLeftP,
-		 unsigned &outRightP,
-		 unsigned &inLeftP,
-		 unsigned &inRightP,
-		 unsigned middle);
+		 int &outLeftP,
+		 int &outRightP,
+		 int &inLeftP,
+		 int &inRightP,
+		 int middle);
 
   bool finishLine(InputImagePixelType * buffer,
 		  InputImagePixelType * inbuffer,
 		  InputImagePixelType &Extreme,
 		  Histogram &histo,
-		  unsigned &outLeftP,
-		  unsigned &outRightP,
-		  unsigned &inLeftP,
-		  unsigned &inRightP,
-		  unsigned middle);
+		  int &outLeftP,
+		  int &outRightP,
+		  int &inLeftP,
+		  int &inRightP,
+		  int middle);
 
   bool useVectorBasedHistogram()
   {

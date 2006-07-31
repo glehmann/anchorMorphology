@@ -35,37 +35,36 @@ AnchorErodeDilateLine<TInputPix, TFunction1, TFunction2>
   // closing, and then copy the result to the output. Hopefully this
   // will improve cache performance when working along non raster
   // directions.
+  if (bufflength <= m_Size/2)
+    {
+    // No point doing anything fancy - just look for the extreme value
+    // This is important when operating near the corner of images with
+    // angled structuring elements 
+    InputImagePixelType Extreme = inbuffer[0];
+    for (unsigned i = 0;i < bufflength;i++) 
+      {
+      if (m_TF1(Extreme, inbuffer[i]))
+	Extreme = inbuffer[i];
+      }
 
-//   if (bufflength <= m_Size)
-//     {
-//     // No point doing anything fancy - just look for the extreme value
-//     // This is important when operating near the corner of images with
-//     // angled structuring elements 
-//     InputImagePixelType Extreme = inbuffer[0];
-//     for (unsigned i = 0;i < bufflength;i++) 
-//       {
-//       if (m_TF1(Extreme, inbuffer[i]))
-// 	Extreme = inbuffer[i];
-//       }
-// 
-//     for (unsigned i = 0;i < bufflength;i++) 
-//       {
-//       buffer[i] = Extreme;
-//       }
-//     return;
-//     }
+    for (unsigned i = 0;i < bufflength;i++) 
+      {
+      buffer[i] = Extreme;
+      }
+    return;
+    }
 
-  unsigned int middle = m_Size/2;
+  int middle = (int)m_Size/2;
 
-  unsigned outLeftP = 0, outRightP = bufflength - 1;
-  unsigned inLeftP = 0, inRightP = bufflength - 1;
+  int outLeftP = 0, outRightP = (int)bufflength - 1;
+  int inLeftP = 0, inRightP = (int)bufflength - 1;
   InputImagePixelType Extreme;
   m_Histo->Reset();
 
   // Left border, first half of structuring element
   Extreme = inbuffer[inLeftP];
   m_Histo->AddPixel(Extreme);
-  for (unsigned i = 0; (i < middle); i++)
+  for (int i = 0; (i < middle); i++)
     {
     ++inLeftP;
     m_Histo->AddPixel(inbuffer[inLeftP]);
@@ -77,7 +76,7 @@ AnchorErodeDilateLine<TInputPix, TFunction1, TFunction2>
   buffer[outLeftP] = Extreme;
   
   // Second half of SE
-  for (unsigned i = 0; i < m_Size - middle - 1; i++)
+  for (int i = 0; i < (int)m_Size - middle - 1; i++)
     {
     ++inLeftP;
     ++outLeftP;
@@ -93,7 +92,7 @@ AnchorErodeDilateLine<TInputPix, TFunction1, TFunction2>
     {
     ++inLeftP;
     ++outLeftP;
-    m_Histo->RemovePixel(inbuffer[inLeftP - m_Size]);
+    m_Histo->RemovePixel(inbuffer[inLeftP - (int)m_Size]);
     m_Histo->AddPixel(inbuffer[inLeftP]);
     Extreme = m_Histo->GetValue();
     buffer[outLeftP] = Extreme;
@@ -113,16 +112,16 @@ AnchorErodeDilateLine<TInputPix, TFunction1, TFunction2>
 	    InputImagePixelType * inbuffer,
 	    InputImagePixelType &Extreme,
 	    Histogram &histo,
-	    unsigned &outLeftP,
-	    unsigned &outRightP,
-	    unsigned &inLeftP,
-	    unsigned &inRightP,
-	    unsigned middle)
+	    int &outLeftP,
+	    int &outRightP,
+	    int &inLeftP,
+	    int &inRightP,
+	    int middle)
 {
   // This returns true to indicate return to startLine label in pseudo
   // code, and false to indicate finshLine
-  unsigned currentP = inLeftP + 1;
-  unsigned sentinel;
+  int currentP = inLeftP + 1;
+  int sentinel;
   
   while ((currentP < inRightP) && m_TF2(inbuffer[currentP], Extreme))
     {
@@ -133,7 +132,7 @@ AnchorErodeDilateLine<TInputPix, TFunction1, TFunction2>
     }
   inLeftP = currentP - 1;
 
-  sentinel = inLeftP + m_Size;
+  sentinel = inLeftP + (int)m_Size;
   if (sentinel > inRightP)
     {
     // finish
@@ -176,7 +175,7 @@ AnchorErodeDilateLine<TInputPix, TFunction1, TFunction2>
     histo.Reset();
     ++outLeftP;
     ++inLeftP;
-    for (unsigned aux = inLeftP; aux <= currentP; ++aux)
+    for (int aux = inLeftP; aux <= currentP; ++aux)
       {
       histo.AddPixel(inbuffer[aux]);
       }
@@ -218,11 +217,11 @@ AnchorErodeDilateLine<TInputPix, TFunction1, TFunction2>
 	     InputImagePixelType * inbuffer,
 	     InputImagePixelType &Extreme,
 	     Histogram &histo,
-	     unsigned &outLeftP,
-	     unsigned &outRightP,
-	     unsigned &inLeftP,
-	     unsigned &inRightP,
-	     unsigned middle)
+	     int &outLeftP,
+	     int &outRightP,
+	     int &inLeftP,
+	     int &inRightP,
+	     int middle)
 {
   // Handles the right border.
   // First half of the structuring element
@@ -230,7 +229,7 @@ AnchorErodeDilateLine<TInputPix, TFunction1, TFunction2>
   Extreme = inbuffer[inRightP];
   histo.AddPixel(Extreme);
 
-  for (unsigned i = 0; i < middle; i++)
+  for (int i = 0; i < middle; i++)
     {
     --inRightP; 
     histo.AddPixel(inbuffer[inRightP]);
@@ -241,7 +240,7 @@ AnchorErodeDilateLine<TInputPix, TFunction1, TFunction2>
     }
   buffer[outRightP] = Extreme;
   // second half of SE
-  for (unsigned i = 0; (i<m_Size - middle - 1) && (outLeftP < outRightP); i++)
+  for (int i = 0; (i<(int)m_Size - middle - 1) && (outLeftP < outRightP); i++)
     {
     --inRightP;
     --outRightP;
@@ -257,7 +256,7 @@ AnchorErodeDilateLine<TInputPix, TFunction1, TFunction2>
     {
     --inRightP;
     --outRightP;
-    histo.RemovePixel(inbuffer[inRightP + m_Size]);
+    histo.RemovePixel(inbuffer[inRightP + (int)m_Size]);
     histo.AddPixel(inbuffer[inRightP]);
     if (m_TF1(inbuffer[inRightP], Extreme))
       {
