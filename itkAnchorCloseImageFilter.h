@@ -12,7 +12,7 @@ class  ITK_EXPORT AnchorCloseImageFilter :
 {
 public:
   typedef AnchorCloseImageFilter Self;
-  typedef AnchorOpenCloseImageFilter<TImage, TKernel, std::less<typename TImage::PixelType>, std::greater<typename TImage::PixelType>, std::less_equal<typename TImage::PixelType>, std::greater_equal<typename TImage::PixelType> > Superclass;
+  typedef AnchorOpenCloseImageFilter<TImage, TKernel, std::greater<typename TImage::PixelType>, std::less<typename TImage::PixelType>, std::greater_equal<typename TImage::PixelType>, std::less_equal<typename TImage::PixelType> > Superclass;
 
   typedef SmartPointer<Self>   Pointer;
   typedef SmartPointer<const Self>  ConstPointer;
