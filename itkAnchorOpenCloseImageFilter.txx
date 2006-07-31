@@ -24,13 +24,11 @@ AnchorOpenCloseImageFilter<TImage, TKernel, LessThan, GreaterThan, LessEqual, Gr
   // check that we are using a decomposable kernel
   if (!m_Kernel.GetDecomposable())
     {
-    itkWarningMacro("Anchor morphology only works with decomposable structuring elements");
-    return;
+    itkExceptionMacro("Anchor morphology only works with decomposable structuring elements");
     }
   if (!m_KernelSet)
     {
-    itkWarningMacro("No kernel set - quitting");
-    return;
+    itkExceptionMacro("No kernel set");
     }
 
   
